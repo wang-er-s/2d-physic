@@ -1,23 +1,12 @@
 ﻿using UnityEngine;
 
-public static class PhysicRaycast
+public static class PhysicsRaycast
 {
-    public static bool AABBRaycast(AABB a, AABB b)
+    public static bool AABBRaycast(MBoxCollider a, MBoxCollider b)
     {
         if (a.Max.x < b.Min.x || a.Min.x > b.Max.x) return false;
         if (a.Max.y < b.Min.y || a.Min.y > b.Max.y) return false;
         return true;
-    }
-
-    public static bool CircleRaycast(Circle a, Circle b)
-    {
-        float sqrDis = a.Transform.Position.SqrDistance(b.Transform.Position);
-        if (sqrDis < (a.Radius + b.Radius) * (a.Radius + b.Radius))
-        {
-            return true;
-        }
-
-        return false;
     }
 
     public static void ResolveCollision(MRigidbody r1, MRigidbody r2)
@@ -59,14 +48,17 @@ public static class PhysicRaycast
         r2.Position += r2.InverseMass * correction;
     }
 
-    public static Manifold CircleVsCircle(Circle c1, Circle c2)
+    public static Manifold CircleVsCircle(MCircleCollider c1, MCircleCollider c2)
     {
-        Vector2 normal = c2.Transform.Position - c1.Transform.Position;
+        Vector2 normal = c2.Position - c1.Position;
         float r = c1.Radius + c2.Radius;
-        r *= r;
-        if (normal.sqrMagnitude > r) return Manifold.Null;
+        var sqrMag = normal.sqrMagnitude;
+        if (sqrMag > r * r) return Manifold.Null;
         Manifold result = new Manifold();
-        float dis = normal.magnitude;
+        result.R1 = c1;
+        result.R2 = c2;
+        float dis = Mathf.Sqrt(sqrMag);
+        // 如果两个圆之间的距离不为0
         if (dis != 0)
         {
             result.Penetration = r - dis;
@@ -83,9 +75,9 @@ public static class PhysicRaycast
         }
     }
 
-    public static Manifold AABBvsAABB(AABB aBox, AABB bBox)
+    public static Manifold AABBvsAABB(MBoxCollider aBox, MBoxCollider bBox)
     {
-        var normal = bBox.Transform.Position - aBox.Transform.Position;
+        var normal = bBox.Position - aBox.Position;
         float aXExtent = (aBox.Max.x - aBox.Min.x) / 2;
         float bXExtent = (bBox.Max.x - bBox.Min.x) / 2;
         float xOverlap = aXExtent + bXExtent - Mathf.Abs(normal.x);
@@ -116,9 +108,9 @@ public static class PhysicRaycast
         }
     }
 
-    public static Manifold AABBvsCircle(AABB ab, Circle circle)
+    public static Manifold AABBvsCircle(MBoxCollider ab, MCircleCollider mCircleCollider)
     {
-        Vector2 normal = circle.Transform.Position - ab.Transform.Position;
+        Vector2 normal = mCircleCollider.Position - ab.Position;
         // 矩形上距离圆形最近的点
         Vector2 closest = normal;
 
@@ -150,7 +142,7 @@ public static class PhysicRaycast
 
         normal -= closest;
         float dis = normal.sqrMagnitude;
-        float radius = circle.Radius;
+        float radius = mCircleCollider.Radius;
         if (dis > radius * radius && !inside) return Manifold.Null;
 
         Manifold result = new Manifold();

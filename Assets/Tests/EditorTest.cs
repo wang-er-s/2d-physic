@@ -1,8 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.TestTools;
 
 public class EditorTest
 {
@@ -10,26 +7,39 @@ public class EditorTest
     [Test]
     public void TestRaycast()
     {
-        Circle c1 = new Circle(1);
-        c1.Transform.Position = Vector2.zero;
-        Circle c2 = new Circle(0.5f);
-        c2.Transform.Position = Vector2.one;
-        Assert.IsTrue(PhysicRaycast.CircleRaycast(c1, c2));
+        MCircleCollider c1 = new MCircleCollider(1, 1, 1, false);
+        c1.Position = Vector2.zero;
+        MCircleCollider c2 = new MCircleCollider(0.5f, 1, 1, false);
+        c2.Position = Vector2.one;
+        Assert.IsTrue(PhysicsRaycast.CircleVsCircle(c1, c2) != Manifold.Null);
 
-        c1 = new Circle(0.5f);
-        c1.Transform.Position = Vector2.zero;
-        c2 = new Circle(0.5f);
-        c2.Transform.Position = Vector2.one;
-        Assert.IsFalse(PhysicRaycast.CircleRaycast(c1, c2));
+        c1 = new MCircleCollider(0.5f, 1, 1, false);
+        c1.Position = Vector2.zero;
+        c2 = new MCircleCollider(0.5f, 1, 1, false);
+        c2.Position = Vector2.one;
+        Assert.IsFalse(PhysicsRaycast.CircleVsCircle(c1, c2) != Manifold.Null);
 
-        AABB a = new AABB(Vector2.one * 0.5f);
-        AABB b = new AABB(Vector2.one * 0.25f);
-        b.Transform.Position = Vector2.one * 0.75f;
-        Assert.IsTrue(PhysicRaycast.AABBRaycast(a,b));
+        MBoxCollider a = new MBoxCollider(Vector2.one * 0.5f, 1, 1, false);
+        MBoxCollider b = new MBoxCollider(Vector2.one * 0.25f,1, 1, false);
+        b.Position = Vector2.one * 0.75f;
+        Assert.IsTrue(PhysicsRaycast.AABBRaycast(a,b));
 
-        a = new AABB(Vector2.one * 0.5f);
-        b = new AABB(Vector2.one * 0.45f);
-        b.Transform.Position = Vector2.one * 1.5f;
-        Assert.IsFalse(PhysicRaycast.AABBRaycast(a,b));
+        a = new MBoxCollider(Vector2.one * 0.5f, 1, 1, false);
+        b = new MBoxCollider(Vector2.one * 0.45f, 1, 1, false);
+        b.Position = Vector2.one * 1.5f;
+        Assert.IsFalse(PhysicsRaycast.AABBRaycast(a,b));
+    }
+
+    [Test]
+    public void TestCircleVsCircle()
+    {
+        MCircleCollider c1 = new MCircleCollider(0.5f, 1, 1, false);
+        c1.Position = new Vector2(0, 0.1f);
+        MCircleCollider c2 = new MCircleCollider(0.5f, 1, 1, false);
+        c2.Position = new Vector2(0,1);
+
+        var result = PhysicsRaycast.CircleVsCircle(c1, c2);
+        Debug.Log(result.Normal);
+        Debug.Log(result.Penetration);
     }
 }

@@ -8,57 +8,53 @@ public class Test : UnityEngine.MonoBehaviour
     public int count;
     public Vector2 Min;
     public Vector2 Max;
-    public Pinball Go;
+    public SphereCollider Self;
+    public SphereCollider SphereCollider;
 
-    private List<Pinball> gos = new List<Pinball>();
+    private PhysicsWorld world;
+
+    private List<ValueTuple<MRigidbody, Transform>> rig2Trans = new();
+
+    private MRigidbody selfRigidbody;
 
     private void Awake()
     {
-        Application.targetFrameRate = 60;
+        world = new PhysicsWorld();
+        Gen();
     }
 
     private void Start()
     {
-        Gen();
     }
 
     private void Update()
     {
-        for (int i = 0; i < gos.Count; i++)
-        {
-            gos[i].OnUpdate();
-        } 
-    }
+        var h = Input.GetAxis("Horizontal");
+        var v = Input.GetAxis("Vertical");
+        selfRigidbody.Position += new Vector2(h, v) * (Time.deltaTime * 3);
 
-    private void OnGUI()
-    {
-        var t = GUI.TextField(new Rect(100, 100, 100, 50), count.ToString());
-        try
+        foreach (var valueTuple in rig2Trans)
         {
-            count = Int32.Parse(t);
+            valueTuple.Item2.position = new Vector3(valueTuple.Item1.Position.x, 0, valueTuple.Item1.Position.y);
         }
-        catch (Exception e)
-        {
-        }
-
-        if (GUI.Button(new Rect(100, 200, 100, 50), "生成"))
-        {
-            Gen();
-        }
+        
+        world.Update();
     }
 
     private void Gen()
     {
-        foreach (var go in gos)
-        {
-            Destroy(go.gameObject);
-        }
-        gos.Clear();
         for (int i = 0; i < count; i++)
         {
-            Vector3 pos = new Vector3(Random.Range(Min.x, Max.x), 0, Random.Range(Min.y, Max.y));
-            Quaternion rota = Quaternion.Euler(new Vector3(0, Random.Range(0, 360f), 0));
-            gos.Add(Instantiate(Go, pos, rota, null));
+            var go = Instantiate(SphereCollider);
+            go.transform.position = new Vector3(Random.Range(Min.x, Max.x), 0, Random.Range(Min.y, Max.y));
+            var render = go.GetComponent<Renderer>();
+            render.sharedMaterial = new Material(render.sharedMaterial);
+            render.sharedMaterial.color = Random.ColorHSV();
+            var rig = world.AddRigidbody(go);
+            rig2Trans.Add((rig, go.transform));
         }
+        var rig2 = world.AddRigidbody(Self);
+        selfRigidbody = rig2;
+        rig2Trans.Add((rig2, transform));
     }
 }

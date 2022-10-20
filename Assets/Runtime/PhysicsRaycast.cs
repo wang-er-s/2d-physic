@@ -44,8 +44,8 @@ public static class PhysicsRaycast
         if(penetrationDepth <= CorrectBuffer) return;
         var normal = Normal(r1, r2);
         Vector2 correction = penetrationDepth / (r1.InverseMass + r2.InverseMass) * CorrectPercent * normal;
-        r1.Position -= r1.InverseMass * correction;
-        r2.Position += r2.InverseMass * correction;
+        r1.Move(-r1.InverseMass * correction);
+        r2.Move(r2.InverseMass * correction);
     }
 
     public static Manifold CircleVsCircle(MCircleCollider c1, MCircleCollider c2)

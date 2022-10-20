@@ -1,12 +1,15 @@
 using System;
 using UnityEngine;
 
-
 public class MBoxCollider : MRigidbody 
 {
      public Vector2 Min => Position - range;
      public Vector2 Max => Position + range;
      private readonly Vector2 range;
+
+     private Vector2[] baseVectories;
+     private Vector2[] vectories;
+     public int[] trangles;
 
      public MBoxCollider(Vector2 range, float mass, float restitution, bool isStatic) : base(mass, restitution, isStatic)
      {
@@ -20,6 +23,36 @@ public class MBoxCollider : MRigidbody
           {
                throw new Exception($"area is too large, max area is P{PhysicsWorld.MaxBodySize}");
           }
+
+          baseVectories = new Vector2[4];
+          vectories = new Vector2[4];
+          float left = -range.x / 2;
+          float right = left + range.x;
+          float bottom = -range.y / 2;
+          float top = bottom + range.y;
+
+          baseVectories[0] = new Vector2(left, top);
+          baseVectories[1] = new Vector2(right, top);
+          baseVectories[2] = new Vector2(right, bottom);
+          baseVectories[3] = new Vector2(left, bottom);
+
+          Array.Copy(baseVectories, vectories, vectories.Length);
+
+          trangles = new[] { 0, 1, 2, 0, 2, 3 };
+     }
+
+     public Vector2[] GetVertices()
+     {
+          if (TransformDirty)
+          {
+               MTransform transform = new MTransform(Position, Rotation);
+               for (int i = 0; i < baseVectories.Length; i++)
+               {
+                    vectories[i] = transform.Transform(baseVectories[i]);
+               }
+          }
+
+          return vectories;
      }
 }
 
@@ -100,11 +133,13 @@ public class MRigidbody
           }
      }
 
-     public Vector2 Position;
+     public bool TransformDirty { get; private set; }
+
+     public Vector2 Position { get; private set; }
      
      public Vector2 Velocity;
 
-     public float Rotation;
+     public float Rotation { get; private set; }
 
      public float RotationVelocity;
 
@@ -121,4 +156,28 @@ public class MRigidbody
      ///  弹力
      /// </summary>
      public readonly float Restitution;
+
+     public void Move(Vector2 vector2)
+     {
+          Position += vector2;
+          TransformDirty = true;
+     }
+
+     public void MoveTo(Vector2 pos)
+     {
+          Position = pos;
+          TransformDirty = true;
+     }
+
+     public void Rotate(float angle)
+     {
+          Rotation += angle;
+          Rotation %= 360;
+     }
+
+     public void RotateTo(float angle)
+     {
+          Rotation = angle;
+          Rotation %= 360;
+     }
 }

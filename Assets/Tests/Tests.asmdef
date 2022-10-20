@@ -4,7 +4,8 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "2DPhysic"
+        "2DPhysic",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [
         "Editor"

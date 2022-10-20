@@ -23,7 +23,8 @@ public sealed class PhysicsWorld
                 boxCollider.attachedRigidbody.mass, 1, boxCollider.attachedRigidbody.isKinematic);
             boxColliders.Add(rigidbody as MBoxCollider);
         }
-        rigidbody.Position = new Vector2(collider.transform.position.x, collider.transform.position.z);
+
+        rigidbody.MoveTo(new Vector2(collider.transform.position.x, collider.transform.position.z));
         rigidbodies.Add(rigidbody);
         return rigidbody;
     }
@@ -37,10 +38,12 @@ public sealed class PhysicsWorld
                 if(mCircleCollider == circleCollider) continue;
                 Manifold result = PhysicsRaycast.CircleVsCircle(mCircleCollider, circleCollider);
                 if(result == Manifold.Null) continue;
-                result.R1.Position += - result.Normal *
-                                      (result.Penetration * result.R1.InverseMass / (result.R1.InverseMass + result.R2.InverseMass));
-                result.R2.Position += result.Normal *
-                                      (result.Penetration * result.R2.InverseMass / (result.R1.InverseMass + result.R2.InverseMass));
+                result.R1.Move(-result.Normal *
+                               (result.Penetration * result.R1.InverseMass /
+                                (result.R1.InverseMass + result.R2.InverseMass)));
+                result.R2.Move(result.Normal *
+                               (result.Penetration * result.R2.InverseMass /
+                                (result.R1.InverseMass + result.R2.InverseMass)));
             }
         }
     }

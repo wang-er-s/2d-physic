@@ -13,7 +13,7 @@ public struct MTransform
     {
         PosX = posX;
         PosY = posY;
-        Sin = Mathf.Sign(angle * Mathf.Deg2Rad);
+        Sin = Mathf.Sin(angle * Mathf.Deg2Rad);
         Cos = Mathf.Cos(angle * Mathf.Deg2Rad);
     }
 

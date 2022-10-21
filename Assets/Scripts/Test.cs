@@ -23,17 +23,13 @@ public class Test : UnityEngine.MonoBehaviour
         GenBox();
     }
 
-    private void Start()
-    {
-    }
-
     private List<MBoxCollider> boxColliders = new();
 
     private void Update()
     {
         var h = Input.GetAxis("Horizontal");
         var v = Input.GetAxis("Vertical");
-       // selfRigidbody.Move(new Vector2(h, v) * (Time.deltaTime * 3));
+        // selfRigidbody.Move(new Vector2(h, v) * (Time.deltaTime * 3));
 
         foreach (var valueTuple in rig2Trans)
         {
@@ -43,18 +39,30 @@ public class Test : UnityEngine.MonoBehaviour
         world.Update();
         foreach (var boxCollider in boxColliders)
         {
-            boxCollider.Rotate(Time.deltaTime * 10);
+            boxCollider.Rotate(Time.deltaTime * 40);
+            bool hasCast = HasCast(boxCollider);
             var vertices = boxCollider.GetVertices();
             for (var i = 0; i < boxCollider.trangles.Length; i += 3)
             {
                 Vector3 p1 = new Vector3(vertices[boxCollider.trangles[i]].x, 0, vertices[boxCollider.trangles[i]].y);
                 Vector3 p2 = new Vector3(vertices[boxCollider.trangles[i+1]].x, 0, vertices[boxCollider.trangles[i+1]].y);
                 Vector3 p3 = new Vector3(vertices[boxCollider.trangles[i+2]].x, 0, vertices[boxCollider.trangles[i+2]].y);
-                Debug.DrawLine(p1, p2);
-                Debug.DrawLine(p3, p2);
-                Debug.DrawLine(p3, p1);
+                Debug.DrawLine(p1, p2, hasCast ? Color.red : Color.green);
+                Debug.DrawLine(p3, p2, hasCast ? Color.red : Color.green);
+                Debug.DrawLine(p3, p1, hasCast ? Color.red : Color.green);
             }
         }
+    }
+
+    private bool HasCast(MBoxCollider collider)
+    {
+        foreach (var boxCollider in boxColliders)
+        {
+            if(boxCollider == collider) continue;
+            if (PhysicsRaycast.PolygonsRaycast(collider.GetVertices(), boxCollider.GetVertices()))
+                return true;
+        }
+        return false;
     }
 
     void DrawBox(Vector2 pos, Vector2 scale)
@@ -66,7 +74,8 @@ public class Test : UnityEngine.MonoBehaviour
     {
         for (int i = 0; i < count; i++)
         {
-            MBoxCollider boxCollider = new MBoxCollider(Vector2.one * 2, 2, 1, false);
+            
+            MBoxCollider boxCollider = new MBoxCollider(new Vector2(Random.Range(1,3f), Random.Range(1,3f)), 2, 1, false);
             boxCollider.MoveTo(new Vector2(Random.Range(Min.x, Max.x), Random.Range(Min.y, Max.y)));
             boxColliders.Add(boxCollider);
         }

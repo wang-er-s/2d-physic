@@ -50,6 +50,7 @@ public class MBoxCollider : MRigidbody
                {
                     vectories[i] = transform.Transform(baseVectories[i]);
                }
+               TransformDirty = false;
           }
 
           return vectories;
@@ -133,7 +134,7 @@ public class MRigidbody
           }
      }
 
-     public bool TransformDirty { get; private set; }
+     public bool TransformDirty { get; protected set; }
 
      public Vector2 Position { get; private set; }
      
@@ -157,10 +158,9 @@ public class MRigidbody
      /// </summary>
      public readonly float Restitution;
 
-     public void Move(Vector2 vector2)
+     public void Move(Vector2 offset)
      {
-          Position += vector2;
-          TransformDirty = true;
+          MoveTo(Position + offset);
      }
 
      public void MoveTo(Vector2 pos)
@@ -171,13 +171,13 @@ public class MRigidbody
 
      public void Rotate(float angle)
      {
-          Rotation += angle;
-          Rotation %= 360;
+         RotateTo(Rotation + angle); 
      }
 
      public void RotateTo(float angle)
      {
           Rotation = angle;
           Rotation %= 360;
+          TransformDirty = true;
      }
 }

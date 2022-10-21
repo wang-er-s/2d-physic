@@ -22,12 +22,12 @@ public class EditorTest
         MBoxCollider a = new MBoxCollider(Vector2.one * 0.5f, 1, 1, false);
         MBoxCollider b = new MBoxCollider(Vector2.one * 0.25f,1, 1, false);
         b.MoveTo(Vector2.one * 0.75f);
-        Assert.IsTrue(PhysicsRaycast.AABBRaycast(a,b));
+        Assert.IsTrue(PhysicsRaycast.PolygonsRaycast(a.GetVertices(),b.GetVertices()));
 
         a = new MBoxCollider(Vector2.one * 0.5f, 1, 1, false);
         b = new MBoxCollider(Vector2.one * 0.45f, 1, 1, false);
         b.MoveTo(Vector2.one * 1.5f);
-        Assert.IsFalse(PhysicsRaycast.AABBRaycast(a,b));
+        Assert.IsFalse(PhysicsRaycast.PolygonsRaycast(a.GetVertices(),b.GetVertices()));
     }
 
     [Test]

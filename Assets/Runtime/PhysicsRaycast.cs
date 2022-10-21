@@ -2,11 +2,48 @@
 
 public static class PhysicsRaycast
 {
-    public static bool AABBRaycast(MBoxCollider a, MBoxCollider b)
+    public static bool PolygonsRaycast(Vector2[] v1, Vector2[] v2)
     {
-        if (a.Max.x < b.Min.x || a.Min.x > b.Max.x) return false;
-        if (a.Max.y < b.Min.y || a.Min.y > b.Max.y) return false;
+        // 分离轴判断是否相交
+        for (int i = 0; i < v1.Length; i++)
+        {
+            Vector2 va = v1[i];
+            Vector2 vb = v1[(i + 1) % v1.Length];
+            Vector2 edge = vb - va;
+            Vector2 axis = new Vector2(-edge.y, edge.x);
+            ProjectVertices(v1, axis, out var min1, out var max1);
+            ProjectVertices(v2, axis, out var min2, out var max2);
+            if (min1 > max2 || min2 > max1)
+                return false;
+        }
+        
+        for (int i = 0; i < v2.Length; i++)
+        {
+            Vector2 va = v2[i];
+            Vector2 vb = v2[(i + 1) % v2.Length];
+            Vector2 edge = vb - va;
+            Vector2 axis = new Vector2(-edge.y, edge.x);
+            ProjectVertices(v1, axis, out var min1, out var max1);
+            ProjectVertices(v2, axis, out var min2, out var max2);
+            if (min1 > max2 || min2 > max1)
+                return false;
+        }
         return true;
+    }
+
+    private static void ProjectVertices(Vector2[] vert, Vector2 axis, out float min, out float max)
+    {
+        min = float.MaxValue;
+        max = float.MinValue;
+        for (int i = 0; i < vert.Length; i++)
+        {
+            var v = vert[i];
+            float proj = Vector2.Dot(v, axis);
+            if (proj < min)
+                min = proj;
+            if (proj > max)
+                max = proj;
+        }
     }
 
     public static void ResolveCollision(MRigidbody r1, MRigidbody r2)

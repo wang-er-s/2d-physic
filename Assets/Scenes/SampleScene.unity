@@ -347,7 +347,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boxCount: 10
   sphereCount: 10
-  Min: {x: -10, y: -10}
-  Max: {x: 10, y: 10}
+  Min: {x: -20, y: -12}
+  Max: {x: 20, y: 12}
   CircleSize: {x: 1, y: 2}
   PolygonSize: {x: 1, y: 3}

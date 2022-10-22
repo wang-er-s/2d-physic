@@ -345,9 +345,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 32f8be19158cb344cbf0cb25b7c86deb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boxCount: 10
-  sphereCount: 10
   Min: {x: -20, y: -12}
   Max: {x: 20, y: 12}
-  CircleSize: {x: 1, y: 2}
-  PolygonSize: {x: 1, y: 3}
+  CircleSize: {x: 0.5, y: 1}
+  PolygonSize: {x: 1, y: 1.5}

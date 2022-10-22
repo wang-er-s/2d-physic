@@ -16,10 +16,6 @@ public class Test : UnityEngine.MonoBehaviour
 
     private PhysicsWorld world;
 
-    private List<MRigidbody> rigidbodies = new();
-    private List<MBoxCollider> boxColliders = new();
-    private List<MCircleCollider> circleColliders = new();
-
     private MRigidbody selfRigidbody;
 
     private void Awake()
@@ -32,47 +28,63 @@ public class Test : UnityEngine.MonoBehaviour
     {
         var h = Input.GetAxis("Horizontal");
         var v = Input.GetAxis("Vertical");
-        selfRigidbody.Move(new Vector2(h, v) * (Time.deltaTime * 3));
+        // selfRigidbody.Move(new Vector2(h, v) * (Time.deltaTime * 3));
 
-        world.Update();
-        foreach (var boxCollider in boxColliders)
+        Vector2 dir = new Vector2(h, v).normalized;
+        selfRigidbody.AddForce(dir * 3);
+        
+        if (Input.GetKey(KeyCode.Space))
         {
-            boxCollider.Rotate(Time.deltaTime * 40);
+            // selfRigidbody.AddForce();
         }
-    }
+        
+        world.Update(Time.deltaTime);
+        for (int i = 0; i < world.RigidbodyCount; i++)
+        {
+            var rig = world.GetRigidbody(i);
+            rig.Rotate(Time.deltaTime * 40);
+            var tarPos = rig.Position;
+            if (tarPos.x < Min.x)
+            {
+                tarPos.x = Max.x;
+            rig.MoveTo(tarPos);
+            }
 
-    private bool HasCast(MBoxCollider collider)
-    {
-        foreach (var boxCollider in boxColliders)
-        {
-            if(boxCollider == collider) continue;
-            if (PhysicsRaycast.PolygonsRaycast(collider, boxCollider) != Manifold.Null)
-                return true;
+            if (tarPos.x > Max.x)
+            {
+                tarPos.x = Min.x;
+            rig.MoveTo(tarPos);
+            }
+
+            if (tarPos.y < Min.y)
+            {
+                tarPos.y = Max.y;
+            rig.MoveTo(tarPos);
+            }
+
+            if (tarPos.y > Max.y)
+            {
+                tarPos.y = Min.y;
+            rig.MoveTo(tarPos);
+            }
         }
-        return false;
     }
 
     private void Gen()
     {
         selfRigidbody = new MBoxCollider(new Vector2(Random.Range(PolygonSize.x,PolygonSize.y), Random.Range(PolygonSize.x,PolygonSize.y)), 1, 1, false);
-        rigidbodies.Add(selfRigidbody);
-        boxColliders.Add(selfRigidbody as MBoxCollider);
         world.AddRigidbody(selfRigidbody);
         for (int i = 0; i < boxCount; i++)
         {
-            MBoxCollider boxCollider = new MBoxCollider(new Vector2(Random.Range(PolygonSize.x,PolygonSize.y), Random.Range(PolygonSize.x,PolygonSize.y)), 2, 1, false);
+            MBoxCollider boxCollider = new MBoxCollider(new Vector2(Random.Range(PolygonSize.x,PolygonSize.y), Random.Range(PolygonSize.x,PolygonSize.y)), 2, 1, Random.Range(1,100) > 50);
             boxCollider.MoveTo(new Vector2(Random.Range(Min.x, Max.x), Random.Range(Min.y, Max.y)));
-            rigidbodies.Add(boxCollider);
-            boxColliders.Add(boxCollider);
             world.AddRigidbody(boxCollider);
         }
         
         for (int i = 0; i < sphereCount; i++)
         {
-            var cir = new MCircleCollider(Random.Range(CircleSize.x, CircleSize.y), 1, 1, false);
+            var cir = new MCircleCollider(Random.Range(CircleSize.x, CircleSize.y), 1, 1, Random.Range(1,100) > 50);
             cir.MoveTo(new Vector2(Random.Range(Min.x, Max.x), Random.Range(Min.y, Max.y)));
-            rigidbodies.Add(cir);
-            circleColliders.Add(cir);
             world.AddRigidbody(cir);
         }
     }
@@ -81,13 +93,13 @@ public class Test : UnityEngine.MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if(rigidbodies == null) return;
-        foreach (var rigi in rigidbodies)
+        if(world == null) return;
+        Gizmos.color = Color.black;
+        for (int w = 0; w < world.RigidbodyCount; w++)
         {
+            var rigi = world.GetRigidbody(w);
             if (rigi is MBoxCollider boxCollider)
             {
-                bool hasCast = HasCast(boxCollider);
-                hasCast = false;
                 var vertices = boxCollider.GetVertices();
                 for (var i = 0; i < boxCollider.trangles.Length; i += 3)
                 {
@@ -97,7 +109,6 @@ public class Test : UnityEngine.MonoBehaviour
                         vertices[boxCollider.trangles[i + 1]].y);
                     Vector3 p3 = new Vector3(vertices[boxCollider.trangles[i + 2]].x, 0,
                         vertices[boxCollider.trangles[i + 2]].y);
-                    Gizmos.color = hasCast ? Color.red : Color.black;
                     Gizmos.DrawLine(p1, p2);
                     Gizmos.DrawLine(p2, p3);
                     Gizmos.DrawLine(p1, p3);
@@ -105,7 +116,6 @@ public class Test : UnityEngine.MonoBehaviour
             }
             else if (rigi is MCircleCollider circleCollider)
             {
-                Gizmos.color = Color.black;
                 Vector3 pos = new Vector3(circleCollider.Position.x, 0, circleCollider.Position.y);
                 DrawGizmosCircle(pos, circleCollider.Radius, 20);
             }

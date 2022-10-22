@@ -129,6 +129,7 @@ public class MRigidbody
      {
           if (mass < 0) throw new Exception("mass must upper 0");
           IsStatic = isStatic;
+          force = Vector2.zero;
           this.Restitution = Mathf.Clamp(restitution, 0, 1);
           if (mass == 0)
           {
@@ -137,33 +138,41 @@ public class MRigidbody
           else
           {
                this.InverseMass = 1 / mass;
-               this.Mass = mass;
           }
      }
 
      public bool TransformDirty { get; protected set; }
-
      public Vector2 Position { get; private set; }
-     
      public Vector2 Velocity;
-
      public float Rotation { get; private set; }
-
      public float RotationVelocity;
 
+     protected Vector2 force;
+     
      public readonly bool IsStatic;
-
      /// <summary>
      /// 质量的反
      /// </summary>
      public readonly float InverseMass;
 
-     public readonly float Mass;
-     
      /// <summary>
-     ///  弹力
+     ///  脉冲恢复弹力
      /// </summary>
      public readonly float Restitution;
+
+     public void Update(float deltaTime)
+     {
+          Velocity += force * deltaTime;
+          Move(deltaTime * Velocity);
+          Rotate(RotationVelocity * RotationVelocity);
+          
+          force = Vector2.zero;
+     }
+
+     public void AddForce(Vector2 forceVal)
+     {
+          this.force = forceVal;
+     }
 
      public void Move(Vector2 offset)
      {

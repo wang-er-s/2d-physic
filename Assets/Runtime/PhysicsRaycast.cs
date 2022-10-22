@@ -16,6 +16,7 @@ public static class PhysicsRaycast
             Vector2 vb = v1[(i + 1) % v1.Length];
             Vector2 edge = vb - va;
             Vector2 axis = new Vector2(-edge.y, edge.x);
+            axis.Normalize();
             ProjectVertices(v1, axis, out var min1, out var max1);
             ProjectVertices(v2, axis, out var min2, out var max2);
             if (min1 > max2 || min2 > max1)
@@ -35,6 +36,7 @@ public static class PhysicsRaycast
             Vector2 vb = v2[(i + 1) % v2.Length];
             Vector2 edge = vb - va;
             Vector2 axis = new Vector2(-edge.y, edge.x);
+            axis.Normalize();
             ProjectVertices(v1, axis, out var min1, out var max1);
             ProjectVertices(v2, axis, out var min2, out var max2);
             if (min1 > max2 || min2 > max1)
@@ -47,8 +49,6 @@ public static class PhysicsRaycast
             }
         }
         
-        depth /= normal.magnitude;
-        normal.Normalize();
         // 矫正一下法线的方向， 需要跟两个物体的移动方向相符  
         // result.R1 R2顺序，R1 R2根据法线移动的方向 normal的方向需要相互配合来实现正确的效果
         Vector2 twoPolygonDir = FindPolygonCenter(v1) - FindPolygonCenter(v2);
@@ -121,6 +121,7 @@ public static class PhysicsRaycast
             Vector2 vb = v1[(i + 1) % v1.Length];
             Vector2 edge = vb - va;
             Vector2 axis = new Vector2(-edge.y, edge.x);
+            axis.Normalize();
             ProjectVertices(v1, axis, out var min1, out var max1);
             ProjectCircle(axis, circleCollider.Position, circleCollider.Radius, out var min2, out var max2);
             if (min1 > max2 || min2 > max1)
@@ -142,6 +143,7 @@ public static class PhysicsRaycast
 
         {
             Vector2 axis = minDisCirVert - circleCollider.Position;
+            axis.Normalize();
             ProjectVertices(v1, axis, out var min1, out var max1);
             ProjectCircle(axis, circleCollider.Position, circleCollider.Radius, out var min2, out var max2);
             if (min1 > max2 || min2 > max1)
@@ -155,8 +157,6 @@ public static class PhysicsRaycast
             }
         }
         
-        depth /= normal.magnitude;
-        normal.Normalize();
         // 矫正一下法线的方向， 需要跟两个物体的移动方向相符  
         // result.R1 R2顺序，R1 R2根据法线移动的方向 normal的方向需要相互配合来实现正确的效果
         Vector2 twoPolygonDir = FindPolygonCenter(v1) - circleCollider.Position;

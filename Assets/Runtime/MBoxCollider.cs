@@ -162,7 +162,9 @@ public class MRigidbody
 
      public void Update(float deltaTime)
      {
-          Velocity += force * deltaTime;
+          // force = mass * acc
+          Vector2 acc = force * InverseMass;
+          Velocity += acc * deltaTime;
           Move(deltaTime * Velocity);
           Rotate(RotationVelocity * RotationVelocity);
           

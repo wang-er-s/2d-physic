@@ -29,6 +29,18 @@ public sealed class PhysicsWorld
         return rigidbody;
     }
 
+    public void AddRigidbody(MRigidbody rigidbody)
+    {
+        if (rigidbody is MCircleCollider circleCollider)
+        {
+            circleColliders.Add(circleCollider);
+        }else if (rigidbody is MBoxCollider boxCollider)
+        {
+            boxColliders.Add(boxCollider);
+        }
+        rigidbodies.Add(rigidbody);
+    }
+
     public void Update()
     {
         foreach (var mCircleCollider in circleColliders)
@@ -38,6 +50,37 @@ public sealed class PhysicsWorld
                 if(mCircleCollider == circleCollider) continue;
                 Manifold result = PhysicsRaycast.CircleVsCircle(mCircleCollider, circleCollider);
                 if(result == Manifold.Null) continue;
+                result.R1.Move(-result.Normal *
+                               (result.Penetration * result.R1.InverseMass /
+                                (result.R1.InverseMass + result.R2.InverseMass)));
+                result.R2.Move(result.Normal *
+                               (result.Penetration * result.R2.InverseMass /
+                                (result.R1.InverseMass + result.R2.InverseMass)));
+            }
+        }
+
+        foreach (var box1 in boxColliders)
+        {
+            foreach (var box2 in boxColliders)
+            {
+                if(box1 == box2) continue;
+                Manifold result = PhysicsRaycast.PolygonsRaycast(box1, box2);
+                if(result == Manifold.Null) continue;
+                result.R1.Move(-result.Normal *
+                               (result.Penetration * result.R1.InverseMass /
+                                (result.R1.InverseMass + result.R2.InverseMass)));
+                result.R2.Move(result.Normal *
+                               (result.Penetration * result.R2.InverseMass /
+                                (result.R1.InverseMass + result.R2.InverseMass)));
+            }
+        }
+
+        foreach (var mBoxCollider in boxColliders)
+        {
+            foreach (var mCircleCollider in circleColliders)
+            {
+                Manifold result = PhysicsRaycast.PolygonCircleIntersect(mBoxCollider, mCircleCollider);
+                if (result == Manifold.Null) continue;
                 result.R1.Move(-result.Normal *
                                (result.Penetration * result.R1.InverseMass /
                                 (result.R1.InverseMass + result.R2.InverseMass)));

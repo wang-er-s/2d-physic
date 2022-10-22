@@ -1,15 +1,12 @@
 using System;
 using UnityEngine;
 
-public class MBoxCollider : MRigidbody 
+public class MBoxCollider :  MPolygonCollider
 {
      public Vector2 Min => Position - range;
      public Vector2 Max => Position + range;
      private readonly Vector2 range;
 
-     private Vector2[] baseVectories;
-     private Vector2[] vectories;
-     public int[] trangles;
 
      public MBoxCollider(Vector2 range, float mass, float restitution, bool isStatic) : base(mass, restitution, isStatic)
      {
@@ -40,7 +37,17 @@ public class MBoxCollider : MRigidbody
 
           trangles = new[] { 0, 1, 2, 0, 2, 3 };
      }
+}
 
+public class MPolygonCollider : MRigidbody
+{
+     protected Vector2[] baseVectories;
+     protected Vector2[] vectories;
+     public int[] trangles;
+     protected MPolygonCollider(float mass, float restitution, bool isStatic) : base(mass, restitution, isStatic)
+     {
+     }
+     
      public Vector2[] GetVertices()
      {
           if (TransformDirty)

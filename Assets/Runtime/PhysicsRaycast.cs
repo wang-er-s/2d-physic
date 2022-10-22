@@ -2,8 +2,13 @@
 
 public static class PhysicsRaycast
 {
-    public static bool PolygonsRaycast(Vector2[] v1, Vector2[] v2)
+    public static Manifold PolygonsRaycast(MPolygonCollider polygon1, MPolygonCollider polygon2)
     {
+        // https://blog.csdn.net/yorhomwang/article/details/54869018 分离轴判断多边形和圆形碰撞
+        Vector2[] v1 = polygon1.GetVertices();
+        Vector2[] v2 = polygon2.GetVertices();
+        var normal = Vector2.zero;
+        var depth = float.MaxValue;
         // 分离轴判断是否相交
         for (int i = 0; i < v1.Length; i++)
         {
@@ -14,7 +19,14 @@ public static class PhysicsRaycast
             ProjectVertices(v1, axis, out var min1, out var max1);
             ProjectVertices(v2, axis, out var min2, out var max2);
             if (min1 > max2 || min2 > max1)
-                return false;
+                return Manifold.Null;
+
+            var tmpDepth = Mathf.Min(max1 - min2, max2 - min1);
+            if (tmpDepth < depth)
+            {
+                depth = tmpDepth;
+                normal = axis;
+            }
         }
         
         for (int i = 0; i < v2.Length; i++)
@@ -26,9 +38,28 @@ public static class PhysicsRaycast
             ProjectVertices(v1, axis, out var min1, out var max1);
             ProjectVertices(v2, axis, out var min2, out var max2);
             if (min1 > max2 || min2 > max1)
-                return false;
+                return Manifold.Null;
+            var tmpDepth = Mathf.Min(max1 - min2, max2 - min1);
+            if (tmpDepth < depth)
+            {
+                depth = tmpDepth;
+                normal = axis;
+            }
         }
-        return true;
+        
+        depth /= normal.magnitude;
+        normal.Normalize();
+        // 矫正一下法线的方向， 需要跟两个物体的移动方向相符  
+        // result.R1 R2顺序，R1 R2根据法线移动的方向 normal的方向需要相互配合来实现正确的效果
+        Vector2 twoPolygonDir = FindPolygonCenter(v1) - FindPolygonCenter(v2);
+        if (Vector2.Dot(twoPolygonDir, normal) < 0)
+            normal = -normal;
+        Manifold result = new Manifold();
+        result.Normal = normal;
+        result.Penetration = depth;
+        result.R1 = polygon2;
+        result.R2 = polygon1;
+        return result;
     }
 
     private static void ProjectVertices(Vector2[] vert, Vector2 axis, out float min, out float max)
@@ -46,6 +77,100 @@ public static class PhysicsRaycast
         }
     }
 
+    private static void ProjectCircle(Vector2 axis, Vector2 center, float radius, out float min, out float max)
+    {
+        Vector2 dir = axis.normalized;
+        Vector2 radiusDir = dir * radius;
+        Vector2 p1 = center - radiusDir;
+        Vector2 p2 = center + radiusDir;
+
+        min = Vector2.Dot(p1, axis);
+        max = Vector2.Dot(p2, axis);
+
+        // 不确定axis的方向，有可能是反的
+        if (min > max)
+        {
+            (min, max) = (max, min);
+        }
+    }
+
+    private static Vector2 FindPolygonCenter(Vector2[] vector2s)
+    {
+        float totalX = 0;
+        float totalY = 0;
+        for (int i = 0; i < vector2s.Length; i++)
+        {
+            totalX += vector2s[i].x;
+            totalY += vector2s[i].y;
+        }
+
+        return new Vector2(totalX / vector2s.Length, totalY / vector2s.Length);
+    }
+
+    public static Manifold PolygonCircleIntersect(MPolygonCollider polygonCollider, MCircleCollider circleCollider)
+    {
+        Vector2[] v1 = polygonCollider.GetVertices();
+        Vector2 minDisCirVert = v1[0];
+        float minDisCir = float.MaxValue;
+        var normal = Vector2.zero;
+        var depth = float.MaxValue;
+        // 分离轴判断是否相交
+        for (int i = 0; i < v1.Length; i++)
+        {
+            Vector2 va = v1[i];
+            Vector2 vb = v1[(i + 1) % v1.Length];
+            Vector2 edge = vb - va;
+            Vector2 axis = new Vector2(-edge.y, edge.x);
+            ProjectVertices(v1, axis, out var min1, out var max1);
+            ProjectCircle(axis, circleCollider.Position, circleCollider.Radius, out var min2, out var max2);
+            if (min1 > max2 || min2 > max1)
+                return Manifold.Null;
+
+            var tmpDepth = Mathf.Min(max1 - min2, max2 - min1);
+            if (tmpDepth < depth)
+            {
+                depth = tmpDepth;
+                normal = axis;
+            }
+
+            var sqrDis = va.SqrDistance(circleCollider.Position);
+            if (sqrDis < minDisCir)
+            {
+                minDisCirVert = va;
+            }
+        }
+
+        {
+            Vector2 axis = minDisCirVert - circleCollider.Position;
+            ProjectVertices(v1, axis, out var min1, out var max1);
+            ProjectCircle(axis, circleCollider.Position, circleCollider.Radius, out var min2, out var max2);
+            if (min1 > max2 || min2 > max1)
+                return Manifold.Null;
+
+            var tmpDepth = Mathf.Min(max1 - min2, max2 - min1);
+            if (tmpDepth < depth)
+            {
+                depth = tmpDepth;
+                normal = axis;
+            }
+        }
+        
+        depth /= normal.magnitude;
+        normal.Normalize();
+        // 矫正一下法线的方向， 需要跟两个物体的移动方向相符  
+        // result.R1 R2顺序，R1 R2根据法线移动的方向 normal的方向需要相互配合来实现正确的效果
+        Vector2 twoPolygonDir = FindPolygonCenter(v1) - circleCollider.Position;
+        if (Vector2.Dot(twoPolygonDir, normal) < 0)
+            normal = -normal;
+        Manifold result = new Manifold();
+        result.Normal = normal;
+        result.Penetration = depth;
+        result.R1 = circleCollider;
+        result.R2 = polygonCollider;
+        return result;
+    }
+    
+    
     public static void ResolveCollision(MRigidbody r1, MRigidbody r2)
     {
         Vector2 normal = Normal(r1, r2);
@@ -108,39 +233,6 @@ public static class PhysicsRaycast
             // 位置相同 随机选，但是要保持一致
             result.Penetration = c1.Radius;
             result.Normal = Vector2.left;
-            return result;
-        }
-    }
-
-    public static Manifold AABBvsAABB(MBoxCollider aBox, MBoxCollider bBox)
-    {
-        var normal = bBox.Position - aBox.Position;
-        float aXExtent = (aBox.Max.x - aBox.Min.x) / 2;
-        float bXExtent = (bBox.Max.x - bBox.Min.x) / 2;
-        float xOverlap = aXExtent + bXExtent - Mathf.Abs(normal.x);
-        if (!(xOverlap > 0)) return Manifold.Null;
-        float aYExtent = (aBox.Max.y - aBox.Min.y) / 2;
-        float bYExtent = (bBox.Max.y - bBox.Min.y) / 2;
-        float yOverlap = aYExtent + bYExtent - Mathf.Abs(normal.y);
-        if (!(yOverlap > 0)) return Manifold.Null;
-        Manifold result = new Manifold();
-        // 取短的一方当作深度
-        if (yOverlap < xOverlap)
-        {
-            if(normal.x < 0)
-                result.Normal = Vector2.left;
-            else
-                result.Normal = Vector2.right;
-            result.Penetration = xOverlap;
-            return result;
-        }
-        else
-        {
-            if(normal.y < 0)
-                result.Normal = Vector2.down;
-            else
-                result.Normal = Vector2.up;
-            result.Penetration = yOverlap;
             return result;
         }
     }

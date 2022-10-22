@@ -10,12 +10,28 @@ public sealed class PhysicsWorld
     private List<MRigidbody> rigidbodies = new();
     private List<MCircleCollider> circleColliders = new();
     private List<MBoxCollider> boxColliders = new();
+    private Vector2 gravity;
 
     public int RigidbodyCount => rigidbodies.Count;
+
+    public PhysicsWorld()
+    {
+        gravity = new Vector2(0, -9.81f);
+    }
 
     public MRigidbody GetRigidbody(int index)
     {
         return rigidbodies[index];
+    }
+
+    public void RemoveRigidbody(int index)
+    {
+        rigidbodies.RemoveAt(index);
+    }
+
+    public void RemoveRigidbody(MRigidbody rigidbody)
+    {
+        rigidbodies.Remove(rigidbody);
     }
 
     public MRigidbody AddRigidbody(Collider collider)
@@ -53,7 +69,7 @@ public sealed class PhysicsWorld
     {
         for (int i = 0; i < rigidbodies.Count; i++)
         {
-            rigidbodies[i].Update(deltaTime);
+            rigidbodies[i].Update(deltaTime, gravity);
         }
 
         CheckCollide();
@@ -66,6 +82,9 @@ public sealed class PhysicsWorld
         MRigidbody r2 = manifold.R2;
         if(r1.IsStatic && r2.IsStatic) return;
         Vector2 relativeVelocity = r1.Velocity - r2.Velocity;
+        // 如果目标方向已经是分离方向，就不用管了
+        if (Vector2.Dot(relativeVelocity, manifold.Normal) < 0)
+            return;
         float e = Mathf.Min(r1.Restitution, r2.Restitution);
         float j = -(1f + e) * Vector2.Dot(relativeVelocity, manifold.Normal);
         j /= (r1.InverseMass + r2.InverseMass);
@@ -89,7 +108,7 @@ public sealed class PhysicsWorld
                 switch (rig1)
                 {
                     case MPolygonCollider polygonCollider when rig2 is MPolygonCollider polygonCollider2:
-                        result = PhysicsRaycast.PolygonsRaycast(polygonCollider, polygonCollider2);
+                        result = PhysicsRaycast.PolygonsIntersect(polygonCollider, polygonCollider2);
                         break;
                     case MPolygonCollider polygonCollider:
                     {
@@ -101,7 +120,7 @@ public sealed class PhysicsWorld
                         break;
                     }
                     case MCircleCollider circleCollider when rig2 is MCircleCollider circleCollider2:
-                        result = PhysicsRaycast.CircleVsCircle(circleCollider, circleCollider2);
+                        result = PhysicsRaycast.CircleIntersect(circleCollider, circleCollider2);
                         break;
                     case MCircleCollider circleCollider:
                     {

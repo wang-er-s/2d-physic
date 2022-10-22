@@ -2,7 +2,7 @@
 
 public static class PhysicsRaycast
 {
-    public static Manifold PolygonsRaycast(MPolygonCollider polygon1, MPolygonCollider polygon2)
+    public static Manifold PolygonsIntersect(MPolygonCollider polygon1, MPolygonCollider polygon2)
     {
         // https://blog.csdn.net/yorhomwang/article/details/54869018 分离轴判断多边形和圆形碰撞
         Vector2[] v1 = polygon1.GetVertices();
@@ -51,7 +51,7 @@ public static class PhysicsRaycast
         
         // 矫正一下法线的方向， 需要跟两个物体的移动方向相符  
         // result.R1 R2顺序，R1 R2根据法线移动的方向 normal的方向需要相互配合来实现正确的效果
-        Vector2 twoPolygonDir = FindPolygonCenter(v1) - FindPolygonCenter(v2);
+        Vector2 twoPolygonDir = polygon1.Position - polygon2.Position;
         if (Vector2.Dot(twoPolygonDir, normal) < 0)
             normal = -normal;
         Manifold result = new Manifold();
@@ -92,19 +92,6 @@ public static class PhysicsRaycast
         {
             (min, max) = (max, min);
         }
-    }
-
-    private static Vector2 FindPolygonCenter(Vector2[] vector2s)
-    {
-        float totalX = 0;
-        float totalY = 0;
-        for (int i = 0; i < vector2s.Length; i++)
-        {
-            totalX += vector2s[i].x;
-            totalY += vector2s[i].y;
-        }
-
-        return new Vector2(totalX / vector2s.Length, totalY / vector2s.Length);
     }
 
     public static Manifold PolygonCircleIntersect(MPolygonCollider polygonCollider, MCircleCollider circleCollider)
@@ -159,7 +146,7 @@ public static class PhysicsRaycast
         
         // 矫正一下法线的方向， 需要跟两个物体的移动方向相符  
         // result.R1 R2顺序，R1 R2根据法线移动的方向 normal的方向需要相互配合来实现正确的效果
-        Vector2 twoPolygonDir = FindPolygonCenter(v1) - circleCollider.Position;
+        Vector2 twoPolygonDir = polygonCollider.Position - circleCollider.Position;
         if (Vector2.Dot(twoPolygonDir, normal) < 0)
             normal = -normal;
         Manifold result = new Manifold();
@@ -170,47 +157,7 @@ public static class PhysicsRaycast
         return result;
     }
     
-    
-    public static void ResolveCollision(MRigidbody r1, MRigidbody r2)
-    {
-        Vector2 normal = Normal(r1, r2);
-        Vector2 rV = r2.Velocity - r1.Velocity;
-        // 法线方向上的速度
-        float velAlongNormal = Vector2.Dot(rV, normal);
-        if (velAlongNormal > 0) return;
-        float restitution = Mathf.Min(r1.Restitution, r2.Restitution);
-        // ??
-        float j = -(1 + restitution) * velAlongNormal;
-        Vector2 impulse = j * normal;
-
-        // 质量越大 对速度的影响越小
-        if (r1.InverseMass != 0)
-            r1.Velocity -= r1.InverseMass / (r1.InverseMass + r2.InverseMass) * impulse;
-        if (r2.InverseMass != 0)
-            r2.Velocity += r2.InverseMass / (r1.InverseMass + r2.InverseMass) * impulse;
-    }
-
-    private const float CorrectPercent = 0.2f;
-
-    private const float CorrectBuffer = 0.01f;
-
-    /// <summary>
-    /// 位置矫正，由于浮点精度问题，穿透的深度是大于脉冲的值的，所以我们需要脉冲之后矫正一下位置
-    /// 一般是使用渗透的0.2左右来矫正
-    /// </summary>
-    /// <param name="r1"></param>
-    /// <param name="r2"></param>
-    /// <param name="penetrationDepth">渗透深度</param>
-    private static void PositionCorrection(MRigidbody r1, MRigidbody r2, float penetrationDepth)
-    {
-        if(penetrationDepth <= CorrectBuffer) return;
-        var normal = Normal(r1, r2);
-        Vector2 correction = penetrationDepth / (r1.InverseMass + r2.InverseMass) * CorrectPercent * normal;
-        r1.Move(-r1.InverseMass * correction);
-        r2.Move(r2.InverseMass * correction);
-    }
-
-    public static Manifold CircleVsCircle(MCircleCollider c1, MCircleCollider c2)
+    public static Manifold CircleIntersect(MCircleCollider c1, MCircleCollider c2)
     {
         Vector2 normal = c2.Position - c1.Position;
         float r = c1.Radius + c2.Radius;
@@ -237,65 +184,7 @@ public static class PhysicsRaycast
         }
     }
 
-    public static Manifold AABBvsCircle(MBoxCollider ab, MCircleCollider mCircleCollider)
-    {
-        Vector2 normal = mCircleCollider.Position - ab.Position;
-        // 矩形上距离圆形最近的点
-        Vector2 closest = normal;
-
-        float xExtent = (ab.Max.x - ab.Min.x) / 2;
-        float yExtent = (ab.Max.y - ab.Min.y) / 2;
-
-        closest.x = Mathf.Clamp(closest.x, -xExtent, xExtent);
-        closest.y = Mathf.Clamp(closest.y, -yExtent, yExtent);
-
-        bool inside = false;
-        if (normal == closest)
-        {
-            inside = true;
-            if (Mathf.Abs(normal.x) > Mathf.Abs(normal.y))
-            {
-                if (closest.x > 0)
-                    closest.x = xExtent;
-                else
-                    closest.x = -xExtent;
-            }
-            else
-            {
-                if (closest.y > 0)
-                    closest.y = yExtent;
-                else
-                    closest.y = -yExtent;
-            }
-        }
-
-        normal -= closest;
-        float dis = normal.sqrMagnitude;
-        float radius = mCircleCollider.Radius;
-        if (dis > radius * radius && !inside) return Manifold.Null;
-
-        Manifold result = new Manifold();
-        dis = Mathf.Sqrt(dis);
-        if (inside)
-        {
-            result.Normal = -normal;
-            result.Penetration = radius - dis;
-        }
-        else
-        {
-            result.Normal = normal;
-            result.Penetration = radius - dis;
-        }
-
-        return result;
-    }
-    
-    private static Vector2 Normal(MRigidbody r1, MRigidbody r2)
-    {
-        return Vector2.one;
-    }
-
-    public static float SqrDistance(this Vector2 selfPos, Vector2 otherPos)
+    private static float SqrDistance(this Vector2 selfPos, Vector2 otherPos)
     {
         float num1 = selfPos.x - otherPos.x;
         float num2 = selfPos.y - otherPos.y;

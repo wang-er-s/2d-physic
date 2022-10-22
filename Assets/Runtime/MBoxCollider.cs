@@ -138,6 +138,8 @@ public class MRigidbody
           else
           {
                this.InverseMass = 1 / mass;
+               if (isStatic)
+                   InverseMass = 0;
           }
      }
 
@@ -160,11 +162,12 @@ public class MRigidbody
      /// </summary>
      public readonly float Restitution;
 
-     public void Update(float deltaTime)
+     internal void Update(float deltaTime, Vector2 gravity)
      {
+          if (IsStatic) return;
           // force = mass * acc
-          Vector2 acc = force * InverseMass;
-          Velocity += acc * deltaTime;
+          // Vector2 acc = force * InverseMass;
+          Velocity += gravity * deltaTime;
           Move(deltaTime * Velocity);
           Rotate(RotationVelocity * RotationVelocity);
           

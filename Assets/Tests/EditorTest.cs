@@ -12,7 +12,7 @@ public class EditorTest
         c1.MoveTo(Vector2.zero);
         MCircleCollider c2 = new MCircleCollider(0.5f, 1, 1, false);
         c2.MoveTo(new Vector2(0, 0.9f));
-        Manifold result = PhysicsRaycast.CircleVsCircle(c1, c2);
+        Manifold result = PhysicsRaycast.CircleIntersect(c1, c2);
         Assert.IsTrue(result.Normal == Vector2.up);
         Assert.IsTrue(Math.Abs(result.Penetration - 0.1f) < 0.001f);
 
@@ -20,17 +20,17 @@ public class EditorTest
         c1.MoveTo(Vector2.zero);
         c2 = new MCircleCollider(0.5f, 1, 1, false);
         c2.MoveTo(new Vector2(0, 1.1f));
-        Assert.IsTrue(PhysicsRaycast.CircleVsCircle(c1, c2) == Manifold.Null);
+        Assert.IsTrue(PhysicsRaycast.CircleIntersect(c1, c2) == Manifold.Null);
 
         MBoxCollider a = new MBoxCollider(Vector2.one, 1, 1, false);
         MBoxCollider b = new MBoxCollider(Vector2.one,1, 1, false);
         b.MoveTo(new Vector2(1,1.1f));
-        Assert.IsTrue(PhysicsRaycast.PolygonsRaycast(a, b) == Manifold.Null);
+        Assert.IsTrue(PhysicsRaycast.PolygonsIntersect(a, b) == Manifold.Null);
 
         a = new MBoxCollider(Vector2.one, 1, 1, false);
         b = new MBoxCollider(Vector2.one, 1, 1, false);
         b.MoveTo(new Vector2(0, 0.9f));
-        result = PhysicsRaycast.PolygonsRaycast(a, b);
+        result = PhysicsRaycast.PolygonsIntersect(a, b);
         Assert.IsTrue(result.Normal == Vector2.down);
         Assert.IsTrue(Math.Abs(result.Penetration - 0.1f) < 0.001f);
     }
@@ -43,7 +43,7 @@ public class EditorTest
         MCircleCollider c2 = new MCircleCollider(0.5f, 1, 1, false);
         c2.MoveTo(new Vector2(0, 1));
 
-        var result = PhysicsRaycast.CircleVsCircle(c1, c2);
+        var result = PhysicsRaycast.CircleIntersect(c1, c2);
         Debug.Log(result.Normal);
         Debug.Log(result.Penetration);
     }

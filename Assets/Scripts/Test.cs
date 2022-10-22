@@ -6,8 +6,6 @@ using Random = UnityEngine.Random;
 
 public class Test : UnityEngine.MonoBehaviour
 {
-    public int boxCount;
-    public int sphereCount;
     public Vector2 Min;
     public Vector2 Max;
 
@@ -26,67 +24,51 @@ public class Test : UnityEngine.MonoBehaviour
 
     private void Update()
     {
-        var h = Input.GetAxis("Horizontal");
-        var v = Input.GetAxis("Vertical");
-        // selfRigidbody.Move(new Vector2(h, v) * (Time.deltaTime * 3));
-
-        Vector2 dir = new Vector2(h, v).normalized;
-        selfRigidbody.AddForce(dir * 3);
-        
-        if (Input.GetKey(KeyCode.Space))
-        {
-            // selfRigidbody.AddForce();
-        }
-        
         world.Update(Time.deltaTime);
         for (int i = 0; i < world.RigidbodyCount; i++)
         {
-            var rig = world.GetRigidbody(i);
-            rig.Rotate(Time.deltaTime * 40);
-            var tarPos = rig.Position;
-            if (tarPos.x < Min.x)
+            if (world.GetRigidbody(i).Position.y < Min.y)
             {
-                tarPos.x = Max.x;
-            rig.MoveTo(tarPos);
-            }
-
-            if (tarPos.x > Max.x)
-            {
-                tarPos.x = Min.x;
-            rig.MoveTo(tarPos);
-            }
-
-            if (tarPos.y < Min.y)
-            {
-                tarPos.y = Max.y;
-            rig.MoveTo(tarPos);
-            }
-
-            if (tarPos.y > Max.y)
-            {
-                tarPos.y = Min.y;
-            rig.MoveTo(tarPos);
+                world.RemoveRigidbody(i);
+                i--;
             }
         }
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            MBoxCollider boxCollider = new MBoxCollider(
+                new Vector2(Random.Range(PolygonSize.x, PolygonSize.y), Random.Range(PolygonSize.x, PolygonSize.y)),
+                2, 0.6f, false);
+            boxCollider.MoveTo(GetMousePos());
+            world.AddRigidbody(boxCollider);
+        }
+
+        if (Input.GetMouseButtonDown(1))
+        {
+            var cir = new MCircleCollider(Random.Range(CircleSize.x, CircleSize.y), 1, 0.6f, false);
+            cir.MoveTo(GetMousePos());
+            world.AddRigidbody(cir);
+        }
+    }
+
+    private Vector2 GetMousePos()
+    {
+        //获取鼠标在相机中（世界中）的位置，转换为屏幕坐标；
+        var screenPosition = Camera.main.WorldToScreenPoint(transform.position);
+//获取鼠标在场景中坐标
+        var mousePositionOnScreen = Input.mousePosition;
+//让场景中的Z=鼠标坐标的Z
+        mousePositionOnScreen.z = screenPosition.z;
+//将相机中的坐标转化为世界坐标
+        var mousePositionInWorld = Camera.main.ScreenToWorldPoint(mousePositionOnScreen);
+        return new Vector2(mousePositionInWorld.x, mousePositionInWorld.z);
     }
 
     private void Gen()
     {
-        selfRigidbody = new MBoxCollider(new Vector2(Random.Range(PolygonSize.x,PolygonSize.y), Random.Range(PolygonSize.x,PolygonSize.y)), 1, 1, false);
-        world.AddRigidbody(selfRigidbody);
-        for (int i = 0; i < boxCount; i++)
-        {
-            MBoxCollider boxCollider = new MBoxCollider(new Vector2(Random.Range(PolygonSize.x,PolygonSize.y), Random.Range(PolygonSize.x,PolygonSize.y)), 2, 1, Random.Range(1,100) > 50);
-            boxCollider.MoveTo(new Vector2(Random.Range(Min.x, Max.x), Random.Range(Min.y, Max.y)));
-            world.AddRigidbody(boxCollider);
-        }
-        
-        for (int i = 0; i < sphereCount; i++)
-        {
-            var cir = new MCircleCollider(Random.Range(CircleSize.x, CircleSize.y), 1, 1, Random.Range(1,100) > 50);
-            cir.MoveTo(new Vector2(Random.Range(Min.x, Max.x), Random.Range(Min.y, Max.y)));
-            world.AddRigidbody(cir);
-        }
+        MBoxCollider ground = new MBoxCollider(new Vector2(Max.x - Min.x, 1), 1, 1, true);
+        ground.MoveTo(new Vector2(0, Min.y + 0.1f));
+        world.AddRigidbody(ground);
     }
 
     #region Draw
@@ -109,6 +91,7 @@ public class Test : UnityEngine.MonoBehaviour
                         vertices[boxCollider.trangles[i + 1]].y);
                     Vector3 p3 = new Vector3(vertices[boxCollider.trangles[i + 2]].x, 0,
                         vertices[boxCollider.trangles[i + 2]].y);
+                    Gizmos.color = rigi.IsStatic ? Color.red : Color.black;
                     Gizmos.DrawLine(p1, p2);
                     Gizmos.DrawLine(p2, p3);
                     Gizmos.DrawLine(p1, p3);
@@ -116,6 +99,7 @@ public class Test : UnityEngine.MonoBehaviour
             }
             else if (rigi is MCircleCollider circleCollider)
             {
+                Gizmos.color = rigi.IsStatic ? Color.red : Color.black;
                 Vector3 pos = new Vector3(circleCollider.Position.x, 0, circleCollider.Position.y);
                 DrawGizmosCircle(pos, circleCollider.Radius, 20);
             }

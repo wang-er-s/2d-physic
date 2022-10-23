@@ -27,9 +27,11 @@ public class Test : UnityEngine.MonoBehaviour
         world.Update(Time.deltaTime);
         for (int i = 0; i < world.RigidbodyCount; i++)
         {
-            if (world.GetRigidbody(i).Position.y < Min.y)
+            var aabb = world.GetRigidbody(i).GetAABB();
+            if (aabb.Min.y < Min.y)
             {
                 world.RemoveRigidbody(i);
+                Debug.Log($"remove {i}  {aabb.Min}");
                 i--;
             }
         }
@@ -67,7 +69,7 @@ public class Test : UnityEngine.MonoBehaviour
     private void Gen()
     {
         MBoxCollider ground = new MBoxCollider(new Vector2(Max.x - Min.x, 1), 1, 1, true);
-        ground.MoveTo(new Vector2(0, Min.y + 0.1f));
+        ground.MoveTo(new Vector2(0, Min.y + 0.5f));
         world.AddRigidbody(ground);
     }
 

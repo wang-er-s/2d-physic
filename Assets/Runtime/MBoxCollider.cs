@@ -62,6 +62,47 @@ public class MPolygonCollider : MRigidbody
 
           return vectories;
      }
+
+     public override void MoveTo(Vector2 pos)
+     {
+          base.MoveTo(pos);
+          AABBDirty = true;
+     }
+
+     public override void RotateTo(float angle)
+     {
+          base.RotateTo(angle);
+          AABBDirty = true;
+     }
+
+     public override AABB GetAABB()
+     {
+          if (AABBDirty)
+          {
+               float minX = float.MaxValue;
+               float maxX = float.MinValue;
+               float minY = float.MaxValue;
+               float maxY = float.MinValue;
+
+               var vertices = GetVertices();
+               for (int i = 0; i < vertices.Length; i++)
+               {
+                    var vert = vertices[i];
+                    if (vert.x < minX)
+                         minX = vert.x;
+                    if (vert.x > maxX)
+                         maxX = vert.x;
+                    if (vert.y < minY)
+                         minY = vert.y;
+                    if (vert.y > maxY)
+                         maxY = vert.y;
+               }
+               AABBCache = new AABB(minX, maxX, minY, maxY);
+               AABBDirty = false;
+          }
+
+          return AABBCache;
+     }
 }
 
 public class MCircleCollider : MRigidbody
@@ -80,6 +121,23 @@ public class MCircleCollider : MRigidbody
           {
                throw new Exception($"area is too large, max area is P{PhysicsWorld.MaxBodySize}");
           }
+     }
+
+     public override void MoveTo(Vector2 pos)
+     {
+          base.MoveTo(pos);
+          AABBDirty = true;
+     }
+
+     public override AABB GetAABB()
+     {
+          if (AABBDirty)
+          {
+               AABBCache = new AABB(Position.x - Radius, Position.x + Radius, Position.y - Radius, Position.y + Radius);
+               AABBDirty = false;
+          }
+
+          return AABBCache;
      }
 }
 
@@ -123,13 +181,15 @@ public struct Manifold : IEquatable<Manifold>
      }
 }
 
-public class MRigidbody
+public abstract class MRigidbody
 {
      protected MRigidbody(float mass, float restitution,bool isStatic)
      {
           if (mass < 0) throw new Exception("mass must upper 0");
           IsStatic = isStatic;
           force = Vector2.zero;
+          TransformDirty = true;
+          AABBDirty = true;
           this.Restitution = Mathf.Clamp(restitution, 0, 1);
           if (mass == 0)
           {
@@ -148,6 +208,8 @@ public class MRigidbody
      public Vector2 Velocity;
      public float Rotation { get; private set; }
      public float RotationVelocity;
+     protected AABB AABBCache;
+     public bool AABBDirty { get; protected set; }
 
      protected Vector2 force;
      
@@ -174,6 +236,8 @@ public class MRigidbody
           force = Vector2.zero;
      }
 
+     public abstract AABB GetAABB();
+
      public void AddForce(Vector2 forceVal)
      {
           this.force = forceVal;
@@ -184,7 +248,7 @@ public class MRigidbody
           MoveTo(Position + offset);
      }
 
-     public void MoveTo(Vector2 pos)
+     public virtual void MoveTo(Vector2 pos)
      {
           Position = pos;
           TransformDirty = true;
@@ -195,10 +259,28 @@ public class MRigidbody
          RotateTo(Rotation + angle); 
      }
 
-     public void RotateTo(float angle)
+     public virtual void RotateTo(float angle)
      {
           Rotation = angle;
           Rotation %= 360;
           TransformDirty = true;
+     }
+}
+
+public struct AABB
+{
+     public Vector2 Min;
+     public Vector2 Max;
+     
+     public AABB(Vector2 min, Vector2 max)
+     {
+          Min = min;
+          Max = max;
+     }
+
+     public AABB(float minx,float maxX, float minY, float maxY)
+     {
+          Min = new Vector2(minx, minY);
+          Max = new Vector2(maxX, maxY);
      }
 }

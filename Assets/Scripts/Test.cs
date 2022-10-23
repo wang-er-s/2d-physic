@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
+using Debug = UnityEngine.Debug;
 using Random = UnityEngine.Random;
 
 public class Test : UnityEngine.MonoBehaviour
@@ -19,19 +22,28 @@ public class Test : UnityEngine.MonoBehaviour
     private void Awake()
     {
         world = new PhysicsWorld();
+        sw = Stopwatch.StartNew();
         Gen();
     }
 
+    private void FixedUpdate()
+    {
+        
+        world.Update(Time.fixedDeltaTime);
+    }
+
+    private Stopwatch sw;
     private void Update()
     {
-        world.Update(Time.deltaTime);
+        sw.Restart();
+        sw.Stop();
+        // print($"count:{world.RigidbodyCount}  time:{sw.ElapsedMilliseconds}");
         for (int i = 0; i < world.RigidbodyCount; i++)
         {
             var aabb = world.GetRigidbody(i).GetAABB();
             if (aabb.Min.y < Min.y)
             {
                 world.RemoveRigidbody(i);
-                Debug.Log($"remove {i}  {aabb.Min}");
                 i--;
             }
         }
@@ -40,7 +52,7 @@ public class Test : UnityEngine.MonoBehaviour
         {
             MBoxCollider boxCollider = new MBoxCollider(
                 new Vector2(Random.Range(PolygonSize.x, PolygonSize.y), Random.Range(PolygonSize.x, PolygonSize.y)),
-                2, 0.6f, false);
+                2, 0f, false);
             boxCollider.MoveTo(GetMousePos());
             world.AddRigidbody(boxCollider);
         }
@@ -105,6 +117,9 @@ public class Test : UnityEngine.MonoBehaviour
                 Vector3 pos = new Vector3(circleCollider.Position.x, 0, circleCollider.Position.y);
                 DrawGizmosCircle(pos, circleCollider.Radius, 20);
             }
+
+            Vector3 pos1 = new Vector3(rigi.Position.x, 0, rigi.Position.y);
+            Handles.Label(pos1, rigi.Id.ToString());
         } 
     }
 

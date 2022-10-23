@@ -82,6 +82,7 @@ public sealed class PhysicsWorld
         MRigidbody r2 = manifold.R2;
         if(r1.IsStatic && r2.IsStatic) return;
         Vector2 relativeVelocity = r1.Velocity - r2.Velocity;
+        if (relativeVelocity == Vector2.zero) return;
         // 如果目标方向已经是分离方向，就不用管了
         if (Vector2.Dot(relativeVelocity, manifold.Normal) < 0)
             return;
@@ -94,11 +95,23 @@ public sealed class PhysicsWorld
             r2.Velocity -= j * r2.InverseMass * manifold.Normal;
     }
     
+    private const float percent = 0.8f; // usually 20% to 80%
+    private const float slop = 0.01f; // usually 0.01 to 0.1
+
+    void PositionalCorrection(Manifold manifold)
+    {
+        var r1 = manifold.R1;
+        var r2 = manifold.R2;
+        Vector2 correction = Mathf.Max(manifold.Penetration - slop, 0.0f) * percent * manifold.Normal;
+        r1.Move(-r1.InverseMass * correction);
+        r2.Move(r2.InverseMass * correction);
+    }
+    
     private void CheckCollide()
     {
         for (int i = 0; i < rigidbodies.Count; i++)
         {
-            for (int j = 0; j < rigidbodies.Count; j++)
+            for (int j = i + 1; j < rigidbodies.Count; j++)
             {
                 if (i == j) continue;
                 Manifold result = Manifold.Null;
@@ -135,21 +148,39 @@ public sealed class PhysicsWorld
                         throw new Exception("rigidbody type error");
                 }
                 if(result == Manifold.Null) continue;
-                if (!result.R1.IsStatic)
+                           if (!result.R1.IsStatic)
                 {
-                    result.R1.Move(-result.Normal *
-                                   (result.Penetration * result.R1.InverseMass /
-                                    (result.R1.InverseMass + result.R2.InverseMass)));
+                    //result.R1.Move(-result.Normal * (result.Penetration * result.R1.InverseMass /
+                     //                                (result.R1.InverseMass + result.R2.InverseMass)));
+                     float percent1 = result.R2.IsStatic ? 1f : 0.5f;
+                    result.R1.Move(-result.Normal * (result.Penetration * percent1));
                 }
 
                 if (!result.R2.IsStatic)
                 {
-                    result.R2.Move(result.Normal *
-                                   (result.Penetration * result.R2.InverseMass /
-                                    (result.R1.InverseMass + result.R2.InverseMass)));
+                    //result.R2.Move(result.Normal * (result.Penetration * result.R2.InverseMass /
+                    //                                (result.R1.InverseMass + result.R2.InverseMass)));
+                     float percent1 = result.R1.IsStatic ? 1f : 0.5f;
+                    result.R2.Move(result.Normal * (result.Penetration * percent1));
                 }
+                // if (!result.R1.IsStatic)
+                // {
+                //     //result.R1.Move(-result.Normal * (result.Penetration * result.R1.InverseMass /
+                //      //                                (result.R1.InverseMass + result.R2.InverseMass)));
+                //     result.R1.Move(-result.Normal * result.Penetration / 2);
+                // }
+                //
+                // if (!result.R2.IsStatic)
+                // {
+                //     //result.R2.Move(result.Normal * (result.Penetration * result.R2.InverseMass /
+                //     //                                (result.R1.InverseMass + result.R2.InverseMass)));
+                //     result.R2.Move(result.Normal * (result.Penetration / 2));
+                // }
                 
                 ResolveCollision(result);
+                PositionalCorrection(result);
+                    Debug.Log($"id={result.R1.Id}  y={result.R1.Position.y}");
+                    Debug.Log($"id={result.R2.Id}  y={result.R2.Position.y}");
             }
         }
     }

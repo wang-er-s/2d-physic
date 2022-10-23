@@ -183,9 +183,12 @@ public struct Manifold : IEquatable<Manifold>
 
 public abstract class MRigidbody
 {
+     private static int increaseId = 0;
+     public int Id { get; }
      protected MRigidbody(float mass, float restitution,bool isStatic)
      {
           if (mass < 0) throw new Exception("mass must upper 0");
+          Id = ++increaseId;
           IsStatic = isStatic;
           force = Vector2.zero;
           TransformDirty = true;
@@ -229,7 +232,9 @@ public abstract class MRigidbody
           if (IsStatic) return;
           // force = mass * acc
           // Vector2 acc = force * InverseMass;
+          
           Velocity += gravity * deltaTime;
+          // Velocity = Vector2.zero;
           Move(deltaTime * Velocity);
           Rotate(RotationVelocity * RotationVelocity);
           
@@ -245,6 +250,7 @@ public abstract class MRigidbody
 
      public void Move(Vector2 offset)
      {
+          if (offset == Vector2.zero) return;
           MoveTo(Position + offset);
      }
 
@@ -256,7 +262,8 @@ public abstract class MRigidbody
 
      public void Rotate(float angle)
      {
-         RotateTo(Rotation + angle); 
+          if (angle == 0) return;
+          RotateTo(Rotation + angle);
      }
 
      public virtual void RotateTo(float angle)

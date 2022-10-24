@@ -67,6 +67,15 @@ public sealed class PhysicsWorld
 
     public void Update(float deltaTime)
     {
+        //for (int j = 0; j < 10; j++)
+        //{
+        //    for (int i = 0; i < rigidbodies.Count; i++)
+        //    {
+        //        rigidbodies[i].Update(deltaTime / 10, gravity);
+        //    }
+
+        //    CheckCollide();
+        //}
         for (int i = 0; i < rigidbodies.Count; i++)
         {
             rigidbodies[i].Update(deltaTime, gravity);
@@ -102,9 +111,11 @@ public sealed class PhysicsWorld
     {
         var r1 = manifold.R1;
         var r2 = manifold.R2;
-        Vector2 correction = Mathf.Max(manifold.Penetration - slop, 0.0f) * percent * manifold.Normal;
+        Vector2 correction = Mathf.Max(manifold.Penetration - slop, 0.0f) / (r1.InverseMass + r2.InverseMass) * percent * manifold.Normal;
         r1.Move(-r1.InverseMass * correction);
         r2.Move(r2.InverseMass * correction);
+        Debug.Log($"fix {r1.Id} {(-r1.InverseMass * correction).y}");
+        Debug.Log($"fix {r2.Id} {(r1.InverseMass * correction).y}");
     }
     
     private void CheckCollide()
@@ -147,40 +158,35 @@ public sealed class PhysicsWorld
                     default:
                         throw new Exception("rigidbody type error");
                 }
-                if(result == Manifold.Null) continue;
-                           if (!result.R1.IsStatic)
+                
+                if (result == Manifold.Null) continue;
+                
+                if (!result.R1.IsStatic)
                 {
-                    //result.R1.Move(-result.Normal * (result.Penetration * result.R1.InverseMass /
-                     //                                (result.R1.InverseMass + result.R2.InverseMass)));
-                     float percent1 = result.R2.IsStatic ? 1f : 0.5f;
-                    result.R1.Move(-result.Normal * (result.Penetration * percent1));
+                    var offset = -result.Normal * (result.Penetration * result.R1.InverseMass /
+                                                   (result.R1.InverseMass + result.R2.InverseMass));
+                    // if (offset.x > 0.01f || offset.y > 0.01f)
+                    {
+                        result.R1.Move(offset);
+                        Debug.Log(
+                            $"id={result.R1.Id} move:{offset.y} pos={result.R1.Position.y}");
+                    }
                 }
-
+                
                 if (!result.R2.IsStatic)
                 {
-                    //result.R2.Move(result.Normal * (result.Penetration * result.R2.InverseMass /
-                    //                                (result.R1.InverseMass + result.R2.InverseMass)));
-                     float percent1 = result.R1.IsStatic ? 1f : 0.5f;
-                    result.R2.Move(result.Normal * (result.Penetration * percent1));
+                    var offset = result.Normal * (result.Penetration * result.R2.InverseMass /
+                                                  (result.R1.InverseMass + result.R2.InverseMass));
+                    // if (offset.x > 0.01f | offset.y >= 0.01f)
+                    {
+                        result.R2.Move(offset);
+                        Debug.Log(
+                            $"id={result.R2.Id} move:{offset.y} pos={result.R2.Position.y}");
+                    }
                 }
-                // if (!result.R1.IsStatic)
-                // {
-                //     //result.R1.Move(-result.Normal * (result.Penetration * result.R1.InverseMass /
-                //      //                                (result.R1.InverseMass + result.R2.InverseMass)));
-                //     result.R1.Move(-result.Normal * result.Penetration / 2);
-                // }
-                //
-                // if (!result.R2.IsStatic)
-                // {
-                //     //result.R2.Move(result.Normal * (result.Penetration * result.R2.InverseMass /
-                //     //                                (result.R1.InverseMass + result.R2.InverseMass)));
-                //     result.R2.Move(result.Normal * (result.Penetration / 2));
-                // }
                 
                 ResolveCollision(result);
                 PositionalCorrection(result);
-                    Debug.Log($"id={result.R1.Id}  y={result.R1.Position.y}");
-                    Debug.Log($"id={result.R2.Id}  y={result.R2.Position.y}");
             }
         }
     }

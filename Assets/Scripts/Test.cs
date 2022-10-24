@@ -28,7 +28,6 @@ public class Test : UnityEngine.MonoBehaviour
 
     private void FixedUpdate()
     {
-        
         world.Update(Time.fixedDeltaTime);
     }
 

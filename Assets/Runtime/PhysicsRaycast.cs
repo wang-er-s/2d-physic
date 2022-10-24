@@ -166,6 +166,8 @@ public static class PhysicsRaycast
         Manifold result = new Manifold();
         result.R1 = c1;
         result.R2 = c2;
+        result.Contact1 = CalcCircleContactPoint(c1, c2);
+        result.ContactCount = 1;
         float dis = Mathf.Sqrt(sqrMag);
         // 如果两个圆之间的距离不为0
         if (dis != 0)
@@ -182,6 +184,13 @@ public static class PhysicsRaycast
             result.Normal = Vector2.left;
             return result;
         }
+    }
+
+    public static Vector2 CalcCircleContactPoint(MCircleCollider c1, MCircleCollider c2)
+    {
+        var normal = c1.Position - c2.Position;
+        normal.Normalize();
+        return c2.Position + normal * c2.Radius;
     }
 
     private static float SqrDistance(this Vector2 selfPos, Vector2 otherPos)

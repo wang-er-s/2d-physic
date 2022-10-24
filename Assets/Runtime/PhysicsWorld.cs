@@ -84,7 +84,7 @@ public sealed class PhysicsWorld
         CheckCollide();
     }
 
-    private void ResolveCollision(Manifold manifold)
+    private void ResolveCollision(in Manifold manifold)
     {
         if(manifold == Manifold.Null) return;
         MRigidbody r1 = manifold.R1;
@@ -107,7 +107,7 @@ public sealed class PhysicsWorld
     private const float percent = 0.8f; // usually 20% to 80%
     private const float slop = 0.01f; // usually 0.01 to 0.1
 
-    void PositionalCorrection(Manifold manifold)
+    void PositionalCorrection(in Manifold manifold)
     {
         var r1 = manifold.R1;
         var r2 = manifold.R2;
@@ -117,9 +117,12 @@ public sealed class PhysicsWorld
         Debug.Log($"fix {r1.Id} {(-r1.InverseMass * correction).y}");
         Debug.Log($"fix {r2.Id} {(r1.InverseMass * correction).y}");
     }
-    
+
+    private List<Manifold> collideManifolds = new();
+
     private void CheckCollide()
     {
+        collideManifolds.Clear();
         for (int i = 0; i < rigidbodies.Count; i++)
         {
             for (int j = i + 1; j < rigidbodies.Count; j++)
@@ -128,7 +131,7 @@ public sealed class PhysicsWorld
                 Manifold result = Manifold.Null;
                 var rig1 = rigidbodies[i];
                 var rig2 = rigidbodies[j];
-                if(rig1.IsStatic && rig2.IsStatic) continue;
+                if (rig1.IsStatic && rig2.IsStatic) continue;
                 switch (rig1)
                 {
                     case MPolygonCollider polygonCollider when rig2 is MPolygonCollider polygonCollider2:
@@ -158,9 +161,9 @@ public sealed class PhysicsWorld
                     default:
                         throw new Exception("rigidbody type error");
                 }
-                
+
                 if (result == Manifold.Null) continue;
-                
+
                 if (!result.R1.IsStatic)
                 {
                     var offset = -result.Normal * (result.Penetration * result.R1.InverseMass /
@@ -172,7 +175,7 @@ public sealed class PhysicsWorld
                             $"id={result.R1.Id} move:{offset.y} pos={result.R1.Position.y}");
                     }
                 }
-                
+
                 if (!result.R2.IsStatic)
                 {
                     var offset = result.Normal * (result.Penetration * result.R2.InverseMass /
@@ -184,10 +187,15 @@ public sealed class PhysicsWorld
                             $"id={result.R2.Id} move:{offset.y} pos={result.R2.Position.y}");
                     }
                 }
-                
-                ResolveCollision(result);
-                PositionalCorrection(result);
+
+                collideManifolds.Add(result);
             }
+        }
+
+        foreach (var manifold in collideManifolds)
+        {
+            ResolveCollision(manifold);
+            PositionalCorrection(manifold);
         }
     }
 }

@@ -147,18 +147,30 @@ public class MCircleCollider : MRigidbody
 public struct Manifold : IEquatable<Manifold>
 {
      public static Manifold Null = new Manifold() { Penetration = -1 };
-     public MRigidbody R1;
-     public MRigidbody R2;
+     public  MRigidbody R1;
+     public  MRigidbody R2;
 
-     /// 渗透深度
-     public float Penetration;
+     /// 渗透深
+     public  float Penetration;
 
-     public Vector2 Normal;
+     public  Vector2 Normal;
 
-     public bool Equals(Manifold other)
+     public  Vector2 Contact1;
+     public  Vector2 Contact2;
+     public  int ContactCount;
+
+     public Manifold(MRigidbody r1, MRigidbody r2, float penetration, Vector2 normal, Vector2 contact1, Vector2 contact2, int contactCount)
      {
-          return Equals(R1, other.R1) && Equals(R2, other.R2) && Penetration.Equals(other.Penetration) && Normal.Equals(other.Normal);
+          R1 = r1;
+          R2 = r2;
+          Penetration = penetration;
+          Normal = normal;
+          Contact1 = contact1;
+          Contact2 = contact2;
+          ContactCount = contactCount;
      }
+
+
 
      public override bool Equals(object obj)
      {
@@ -167,7 +179,7 @@ public struct Manifold : IEquatable<Manifold>
 
      public override int GetHashCode()
      {
-          return HashCode.Combine(R1, R2, Penetration, Normal);
+          return HashCode.Combine(R1, R2, Penetration, Normal, Contact1, Contact2, ContactCount);
      }
 
      public static bool operator ==(Manifold m1, Manifold m2)
@@ -178,6 +190,13 @@ public struct Manifold : IEquatable<Manifold>
      public static bool operator !=(Manifold m1, Manifold m2)
      {
           return !(m1 == m2);
+     }
+
+     public bool Equals(Manifold other)
+     {
+          return Equals(R1, other.R1) && Equals(R2, other.R2) && Penetration.Equals(other.Penetration) &&
+                 Normal.Equals(other.Normal) && Contact1.Equals(other.Contact1) && Contact2.Equals(other.Contact2) &&
+                 ContactCount == other.ContactCount;
      }
 }
 

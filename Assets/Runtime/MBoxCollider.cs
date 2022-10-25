@@ -21,31 +21,36 @@ public class MBoxCollider :  MPolygonCollider
                throw new Exception($"area is too large, max area is P{PhysicsWorld.MaxBodySize}");
           }
 
-          baseVectories = new Vector2[4];
-          vectories = new Vector2[4];
+          var tmpVertexes = new Vector2[4];
           float left = -range.x / 2;
           float right = left + range.x;
           float bottom = -range.y / 2;
           float top = bottom + range.y;
 
-          baseVectories[0] = new Vector2(left, top);
-          baseVectories[1] = new Vector2(right, top);
-          baseVectories[2] = new Vector2(right, bottom);
-          baseVectories[3] = new Vector2(left, bottom);
+          tmpVertexes[0] = new Vector2(left, top);
+          tmpVertexes[1] = new Vector2(right, top);
+          tmpVertexes[2] = new Vector2(right, bottom);
+          tmpVertexes[3] = new Vector2(left, bottom);
 
-          Array.Copy(baseVectories, vectories, vectories.Length);
-
-          trangles = new[] { 0, 1, 2, 0, 2, 3 };
+          var tmpTriangles = new[] { 0, 1, 2, 0, 2, 3 };
+          SetVertexAndTriangles(tmpVertexes, tmpTriangles);
      }
 }
 
 public class MPolygonCollider : MRigidbody
 {
-     protected Vector2[] baseVectories;
-     protected Vector2[] vectories;
-     public int[] trangles;
-     protected MPolygonCollider(float mass, float restitution, bool isStatic) : base(mass, restitution, isStatic)
+     protected Vector2[] BaseVertexes;
+     protected Vector2[] vertexes;
+     public int[] triangles;
+     public MPolygonCollider(float mass, float restitution, bool isStatic) : base(mass, restitution, isStatic)
      {
+     }
+
+     public void SetVertexAndTriangles(Vector2[] vertexes, int[] triangles)
+     {
+          this.BaseVertexes = vertexes;
+          this.triangles = triangles;
+          this.vertexes = new Vector2[BaseVertexes.Length];
      }
      
      public Vector2[] GetVertices()
@@ -53,14 +58,14 @@ public class MPolygonCollider : MRigidbody
           if (TransformDirty)
           {
                MTransform transform = new MTransform(Position, Rotation);
-               for (int i = 0; i < baseVectories.Length; i++)
+               for (int i = 0; i < BaseVertexes.Length; i++)
                {
-                    vectories[i] = transform.Transform(baseVectories[i]);
+                    vertexes[i] = transform.Transform(BaseVertexes[i]);
                }
                TransformDirty = false;
           }
 
-          return vectories;
+          return vertexes;
      }
 
      public override void MoveTo(Vector2 pos)

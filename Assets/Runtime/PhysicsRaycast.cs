@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 public static class PhysicsRaycast
 {
@@ -59,6 +60,7 @@ public static class PhysicsRaycast
         result.Penetration = depth;
         result.R1 = polygon2;
         result.R2 = polygon1;
+        CalcPolygonContactPoint(polygon1, polygon2, ref result);
         return result;
     }
 
@@ -96,6 +98,9 @@ public static class PhysicsRaycast
 
     public static Manifold PolygonCircleIntersect(MPolygonCollider polygonCollider, MCircleCollider circleCollider)
     {
+        Manifold result = new Manifold();
+        CalcCirclePolygonContactPoint(circleCollider, polygonCollider, ref result);
+        // if (result.ContactCount <= 0) return Manifold.Null;
         Vector2[] v1 = polygonCollider.GetVertices();
         Vector2 minDisCirVert = v1[0];
         float minDisCir = float.MaxValue;
@@ -149,7 +154,6 @@ public static class PhysicsRaycast
         Vector2 twoPolygonDir = polygonCollider.Position - circleCollider.Position;
         if (Vector2.Dot(twoPolygonDir, normal) < 0)
             normal = -normal;
-        Manifold result = new Manifold();
         result.Normal = normal;
         result.Penetration = depth;
         result.R1 = circleCollider;
@@ -166,8 +170,8 @@ public static class PhysicsRaycast
         Manifold result = new Manifold();
         result.R1 = c1;
         result.R2 = c2;
-        result.Contact1 = CalcCircleContactPoint(c1, c2);
-        result.ContactCount = 1;
+        CalcCircleContactPoint(c1, c2, ref result);
+        if (result.ContactCount <= 0) return Manifold.Null;
         float dis = Mathf.Sqrt(sqrMag);
         // 如果两个圆之间的距离不为0
         if (dis != 0)
@@ -186,11 +190,118 @@ public static class PhysicsRaycast
         }
     }
 
-    public static Vector2 CalcCircleContactPoint(MCircleCollider c1, MCircleCollider c2)
+    public static void CalcCircleContactPoint(MCircleCollider c1, MCircleCollider c2, ref Manifold manifold)
     {
         var normal = c1.Position - c2.Position;
         normal.Normalize();
-        return c2.Position + normal * c2.Radius;
+        manifold.Contact1 = c2.Position + normal * c2.Radius;
+        manifold.ContactCount = 1;
+    }
+
+    public static void CalcPolygonContactPoint(MPolygonCollider p1, MPolygonCollider p2, ref Manifold manifold)
+    {
+        var vertices1 = p1.GetVertices();
+        var vertices2 = p2.GetVertices();
+        float min = float.MaxValue;
+        for (int i = 0; i < vertices1.Length; i++)
+        {
+            var vertex1 = vertices1[i];
+            var vertex2 = vertices1[(i + 1) % vertices1.Length];
+            for (int j = 0; j < vertices2.Length; j++)
+            {
+                var point = vertices2[j];
+                var closetPoint = FindClosetPoint(vertex1, vertex2, point);
+                var sqrDis = closetPoint.SqrDistance(point);
+                if (Mathf.Abs(sqrDis - min) <= 0.001f)
+                {
+                    min = sqrDis;
+                    manifold.Contact2 = closetPoint;
+                    manifold.ContactCount = 2;
+                }else if (sqrDis < min)
+                {
+                    min = sqrDis;
+                    manifold.Contact1 = closetPoint;
+                    manifold.ContactCount = 1;
+                }
+            }
+        }
+        for (int i = 0; i < vertices2.Length; i++)
+        {
+            var vertex1 = vertices2[i];
+            var vertex2 = vertices2[(i + 1) % vertices2.Length];
+            for (int j = 0; j < vertices1.Length; j++)
+            {
+                var point = vertices1[j];
+                var closetPoint = FindClosetPoint(vertex1, vertex2, point);
+                var sqrDis = closetPoint.SqrDistance(point);
+                if (sqrDis.NearlyEqual(min))
+                {
+                    min = sqrDis;
+                    if (!closetPoint.NearlyEqual(manifold.Contact1))
+                    {
+                        manifold.Contact2 = closetPoint;
+                        manifold.ContactCount = 2;
+                    }
+                }else if (sqrDis < min)
+                {
+                    min = sqrDis;
+                    manifold.Contact1 = closetPoint;
+                    manifold.ContactCount = 1;
+                }
+            }
+        }
+    }
+
+    public static void CalcCirclePolygonContactPoint(MCircleCollider circle, MPolygonCollider polygon,
+        ref Manifold manifold)
+    {
+        var vertices = polygon.GetVertices();
+        float min = float.MaxValue;
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            var vertex = vertices[i];
+            var vertex2 = vertices[(i + 1) % vertices.Length];
+            var closetPoint = FindClosetPoint(vertex, vertex2, circle.Position);
+            var sqrDis = closetPoint.SqrDistance(circle.Position);
+            if (sqrDis < min)
+            {
+                min = sqrDis;
+                manifold.Contact1 = closetPoint;
+                manifold.ContactCount = 1;
+            }
+        }
+    }
+
+    public static Vector2 FindClosetPoint(Vector2 start, Vector2 end, Vector2 point)
+    {
+        Vector2 ab = end - start;
+        Vector2 ap = point - start;
+
+        Vector2 closestPoint = Vector2.zero;
+
+        float dot = Vector2.Dot(ab, ap);
+        float dDivAb = dot / ab.sqrMagnitude;
+        if (dDivAb <= 0)
+        {
+            closestPoint = start;
+        }
+        else if (dDivAb >= 1)
+        {
+            closestPoint = end;
+        }
+        else
+        {
+            closestPoint = start + dDivAb * ab;
+        }
+
+        return closestPoint;
+    }
+
+    public static bool AABBIntersect(AABB a1, AABB a2)
+    {
+        if (a1.Min.x > a2.Max.x || a1.Min.y > a2.Max.y || a2.Min.x > a1.Max.x || a2.Min.y > a2.Max.y)
+            return false;
+        return true;
     }
 
     private static float SqrDistance(this Vector2 selfPos, Vector2 otherPos)
@@ -198,5 +309,15 @@ public static class PhysicsRaycast
         float num1 = selfPos.x - otherPos.x;
         float num2 = selfPos.y - otherPos.y;
         return (float)(num1 * (double)num1 + num2 * (double)num2);
+    }
+
+    private static bool NearlyEqual(this Vector2 v1, Vector2 v2)
+    {
+        return v1.x.NearlyEqual(v2.x) && v1.y.NearlyEqual(v2.y);
+    }
+
+    private static bool NearlyEqual(this float f1, float f2)
+    {
+        return Math.Abs(f1 - f2) < 0.001f;
     }
 }

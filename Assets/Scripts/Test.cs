@@ -26,16 +26,31 @@ public class Test : UnityEngine.MonoBehaviour
         Gen();
     }
 
+    private double calcTime;
     private void FixedUpdate()
     {
+        sw.Restart();
         world.Update(Time.fixedDeltaTime);
+        sw.Stop();
+        timer += Time.fixedDeltaTime;
+        if (timer >= 0.5f)
+        {
+            calcTime = (sw.ElapsedTicks * 1.0f / Stopwatch.Frequency) * 1000f;
+            timer = 0;
+        }
+    }
+
+    private float timer;
+    private void OnGUI()
+    {
+        GUI.color = Color.green;
+        GUI.skin.label.fontSize = 40;
+        GUI.Label(new Rect(100, 100, 300, 200), $"count:{world.RigidbodyCount} time:{calcTime:0.0000}");
     }
 
     private Stopwatch sw;
     private void Update()
     {
-        sw.Restart();
-        sw.Stop();
         // print($"count:{world.RigidbodyCount}  time:{sw.ElapsedMilliseconds}");
         for (int i = 0; i < world.RigidbodyCount; i++)
         {
@@ -51,17 +66,33 @@ public class Test : UnityEngine.MonoBehaviour
         {
             MBoxCollider boxCollider = new MBoxCollider(
                 new Vector2(Random.Range(PolygonSize.x, PolygonSize.y), Random.Range(PolygonSize.x, PolygonSize.y)),
-                2, 0f, false);
+                2, 0.3f, false);
             boxCollider.MoveTo(GetMousePos());
             world.AddRigidbody(boxCollider);
         }
 
         if (Input.GetMouseButtonDown(1))
         {
-            var cir = new MCircleCollider(Random.Range(CircleSize.x, CircleSize.y), 1, 0.6f, false);
+            var cir = new MCircleCollider(Random.Range(CircleSize.x, CircleSize.y), 1, 0.3f, false);
             cir.MoveTo(GetMousePos());
             world.AddRigidbody(cir);
         }
+
+        if (Input.GetMouseButtonDown(2))
+        {
+            MPolygonCollider polygonCollider = CreateTriangle();
+            polygonCollider.MoveTo(GetMousePos());
+            world.AddRigidbody(polygonCollider);
+        }
+    }
+
+    private MPolygonCollider CreateTriangle()
+    {
+        MPolygonCollider polygonCollider = new MPolygonCollider(2, 0.3f, false);
+        Vector2[] vertexes = new[] { new Vector2(-0.707f, 0), new Vector2(0, 1), new Vector2(0.707f, 0) };
+        int[] trangle = new[] { 0, 1, 2 };
+        polygonCollider.SetVertexAndTriangles(vertexes, trangle);
+        return polygonCollider;
     }
 
     private Vector2 GetMousePos()
@@ -93,17 +124,17 @@ public class Test : UnityEngine.MonoBehaviour
         for (int w = 0; w < world.RigidbodyCount; w++)
         {
             var rigi = world.GetRigidbody(w);
-            if (rigi is MBoxCollider boxCollider)
+            if (rigi is MPolygonCollider boxCollider)
             {
                 var vertices = boxCollider.GetVertices();
-                for (var i = 0; i < boxCollider.trangles.Length; i += 3)
+                for (var i = 0; i < boxCollider.triangles.Length; i += 3)
                 {
-                    Vector3 p1 = new Vector3(vertices[boxCollider.trangles[i]].x, 0,
-                        vertices[boxCollider.trangles[i]].y);
-                    Vector3 p2 = new Vector3(vertices[boxCollider.trangles[i + 1]].x, 0,
-                        vertices[boxCollider.trangles[i + 1]].y);
-                    Vector3 p3 = new Vector3(vertices[boxCollider.trangles[i + 2]].x, 0,
-                        vertices[boxCollider.trangles[i + 2]].y);
+                    Vector3 p1 = new Vector3(vertices[boxCollider.triangles[i]].x, 0,
+                        vertices[boxCollider.triangles[i]].y);
+                    Vector3 p2 = new Vector3(vertices[boxCollider.triangles[i + 1]].x, 0,
+                        vertices[boxCollider.triangles[i + 1]].y);
+                    Vector3 p3 = new Vector3(vertices[boxCollider.triangles[i + 2]].x, 0,
+                        vertices[boxCollider.triangles[i + 2]].y);
                     Gizmos.color = rigi.IsStatic ? Color.red : Color.black;
                     Gizmos.DrawLine(p1, p2);
                     Gizmos.DrawLine(p2, p3);
@@ -120,6 +151,21 @@ public class Test : UnityEngine.MonoBehaviour
             Vector3 pos1 = new Vector3(rigi.Position.x, 0, rigi.Position.y);
             Handles.Label(pos1, rigi.Id.ToString());
         } 
+        
+        Gizmos.color = Color.green;
+        foreach (var manifold in world.contactManifolds)
+        {
+            if (manifold.ContactCount >= 1)
+            {
+                Vector3 pos = new Vector3(manifold.Contact1.x, 0, manifold.Contact1.y);
+                DrawGizmosCircle(pos, 0.2f, 5);
+                if (manifold.ContactCount >= 2)
+                {
+                    Vector3 pos2 = new Vector3(manifold.Contact2.x, 0, manifold.Contact2.y);
+                    DrawGizmosCircle(pos2, 0.2f, 5);
+                }
+            }
+        }
     }
 
     private static void DrawGizmosCircle(Vector3 pos, float radius, int numSegments)

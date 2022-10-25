@@ -114,24 +114,26 @@ public sealed class PhysicsWorld
         Vector2 correction = Mathf.Max(manifold.Penetration - slop, 0.0f) / (r1.InverseMass + r2.InverseMass) * percent * manifold.Normal;
         r1.Move(-r1.InverseMass * correction);
         r2.Move(r2.InverseMass * correction);
-        Debug.Log($"fix {r1.Id} {(-r1.InverseMass * correction).y}");
-        Debug.Log($"fix {r2.Id} {(r1.InverseMass * correction).y}");
+        // Debug.Log($"fix {r1.Id} {(-r1.InverseMass * correction).y}");
+        // Debug.Log($"fix {r2.Id} {(r1.InverseMass * correction).y}");
     }
 
-    private List<Manifold> collideManifolds = new();
+    public List<Manifold> contactManifolds = new();
 
     private void CheckCollide()
     {
-        collideManifolds.Clear();
+        contactManifolds.Clear();
         for (int i = 0; i < rigidbodies.Count; i++)
         {
+            var rig1 = rigidbodies[i];
+            AABB r1aabb = rig1.GetAABB();
             for (int j = i + 1; j < rigidbodies.Count; j++)
             {
-                if (i == j) continue;
                 Manifold result = Manifold.Null;
-                var rig1 = rigidbodies[i];
                 var rig2 = rigidbodies[j];
+                var r2aabb = rig2.GetAABB();
                 if (rig1.IsStatic && rig2.IsStatic) continue;
+                if (!PhysicsRaycast.AABBIntersect(r1aabb, r2aabb)) continue;
                 switch (rig1)
                 {
                     case MPolygonCollider polygonCollider when rig2 is MPolygonCollider polygonCollider2:
@@ -171,8 +173,7 @@ public sealed class PhysicsWorld
                     // if (offset.x > 0.01f || offset.y > 0.01f)
                     {
                         result.R1.Move(offset);
-                        Debug.Log(
-                            $"id={result.R1.Id} move:{offset.y} pos={result.R1.Position.y}");
+                        // Debug.Log($"id={result.R1.Id} move:{offset.y} pos={result.R1.Position.y}");
                     }
                 }
 
@@ -183,16 +184,15 @@ public sealed class PhysicsWorld
                     // if (offset.x > 0.01f | offset.y >= 0.01f)
                     {
                         result.R2.Move(offset);
-                        Debug.Log(
-                            $"id={result.R2.Id} move:{offset.y} pos={result.R2.Position.y}");
+                        // Debug.Log($"id={result.R2.Id} move:{offset.y} pos={result.R2.Position.y}");
                     }
                 }
 
-                collideManifolds.Add(result);
+                contactManifolds.Add(result);
             }
         }
 
-        foreach (var manifold in collideManifolds)
+        foreach (var manifold in contactManifolds)
         {
             ResolveCollision(manifold);
             PositionalCorrection(manifold);

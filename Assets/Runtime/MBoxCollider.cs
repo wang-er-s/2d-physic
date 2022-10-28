@@ -32,8 +32,9 @@ public class MBoxCollider :  MPolygonCollider
           tmpVertexes[2] = new Vector2(right, bottom);
           tmpVertexes[3] = new Vector2(left, bottom);
 
-          var tmpTriangles = new[] { 0, 1, 2, 0, 2, 3 };
-          SetVertexAndTriangles(tmpVertexes, tmpTriangles);
+          SetVertexAndTriangles(tmpVertexes);
+          Inertia = (1f / 12) * Mass * (range.x * range.x + range.y * range.y);
+          InverseInertia = 1 / Inertia;
      }
 }
 
@@ -41,15 +42,13 @@ public class MPolygonCollider : MRigidbody
 {
      protected Vector2[] BaseVertexes;
      protected Vector2[] vertexes;
-     public int[] triangles;
      public MPolygonCollider(float mass, float restitution, bool isStatic) : base(mass, restitution, isStatic)
      {
      }
 
-     public void SetVertexAndTriangles(Vector2[] vertexes, int[] triangles)
+     public void SetVertexAndTriangles(Vector2[] vertexes)
      {
           this.BaseVertexes = vertexes;
-          this.triangles = triangles;
           this.vertexes = new Vector2[BaseVertexes.Length];
      }
      
@@ -57,7 +56,7 @@ public class MPolygonCollider : MRigidbody
      {
           if (TransformDirty)
           {
-               MTransform transform = new MTransform(Position, Rotation);
+               MTransform transform = new MTransform(Position, Angle);
                for (int i = 0; i < BaseVertexes.Length; i++)
                {
                     vertexes[i] = transform.Transform(BaseVertexes[i]);
@@ -108,6 +107,7 @@ public class MPolygonCollider : MRigidbody
 
           return AABBCache;
      }
+
 }
 
 public class MCircleCollider : MRigidbody
@@ -126,6 +126,9 @@ public class MCircleCollider : MRigidbody
           {
                throw new Exception($"area is too large, max area is P{PhysicsWorld.MaxBodySize}");
           }
+
+          Inertia =  1f / 2f * Mass * Radius * Radius;
+          InverseInertia = 1 / Inertia;
      }
 
      public override void MoveTo(Vector2 pos)
@@ -144,6 +147,7 @@ public class MCircleCollider : MRigidbody
 
           return AABBCache;
      }
+
 }
 
 /// <summary>
@@ -224,17 +228,24 @@ public abstract class MRigidbody
           }
           else
           {
-               this.InverseMass = 1 / mass;
                if (isStatic)
-                   InverseMass = 0;
+               {
+                    InverseMass = 0;
+                    this.Mass = float.MaxValue;
+               }
+               else
+               {
+                    this.Mass = mass;
+                    this.InverseMass = 1 / mass;
+               }
           }
      }
 
      public bool TransformDirty { get; protected set; }
      public Vector2 Position { get; private set; }
      public Vector2 Velocity;
-     public float Rotation { get; private set; }
-     public float RotationVelocity;
+     public float Angle { get; private set; }
+     public float RotateVelocity;
      protected AABB AABBCache;
      public bool AABBDirty { get; protected set; }
 
@@ -245,11 +256,18 @@ public abstract class MRigidbody
      /// 质量的反
      /// </summary>
      public readonly float InverseMass;
+     public readonly float Mass;
 
      /// <summary>
      ///  脉冲恢复弹力
      /// </summary>
      public readonly float Restitution;
+
+     /// <summary>
+     /// 惯性
+     /// </summary>
+     public float Inertia { get; protected set; }
+     public float InverseInertia { get; protected set; }
 
      internal void Update(float deltaTime, Vector2 gravity)
      {
@@ -260,7 +278,7 @@ public abstract class MRigidbody
           Velocity += gravity * deltaTime;
           // Velocity = Vector2.zero;
           Move(deltaTime * Velocity);
-          Rotate(RotationVelocity * RotationVelocity);
+          Rotate(RotateVelocity * RotateVelocity);
           
           force = Vector2.zero;
      }
@@ -287,13 +305,13 @@ public abstract class MRigidbody
      public void Rotate(float angle)
      {
           if (angle == 0) return;
-          RotateTo(Rotation + angle);
+          RotateTo(Angle + angle);
      }
 
      public virtual void RotateTo(float angle)
      {
-          Rotation = angle;
-          Rotation %= 360;
+          Angle = angle;
+          Angle %= 360;
           TransformDirty = true;
      }
 }

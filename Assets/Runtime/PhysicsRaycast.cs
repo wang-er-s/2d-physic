@@ -313,7 +313,7 @@ public static class PhysicsRaycast
 
     private static bool NearlyEqual(this Vector2 v1, Vector2 v2)
     {
-        return v1.x.NearlyEqual(v2.x) && v1.y.NearlyEqual(v2.y);
+        return v1.SqrDistance(v2) < 0.001f * 0.001f;
     }
 
     private static bool NearlyEqual(this float f1, float f2)

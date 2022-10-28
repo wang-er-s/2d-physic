@@ -90,8 +90,7 @@ public class Test : UnityEngine.MonoBehaviour
     {
         MPolygonCollider polygonCollider = new MPolygonCollider(2, 0.3f, false);
         Vector2[] vertexes = new[] { new Vector2(-0.707f, 0), new Vector2(0, 1), new Vector2(0.707f, 0) };
-        int[] trangle = new[] { 0, 1, 2 };
-        polygonCollider.SetVertexAndTriangles(vertexes, trangle);
+        polygonCollider.SetVertexAndTriangles(vertexes);
         return polygonCollider;
     }
 
@@ -113,6 +112,18 @@ public class Test : UnityEngine.MonoBehaviour
         MBoxCollider ground = new MBoxCollider(new Vector2(Max.x - Min.x, 1), 1, 1, true);
         ground.MoveTo(new Vector2(0, Min.y + 0.5f));
         world.AddRigidbody(ground);
+
+        float height = Max.y - Min.y;
+        float width = Max.x - Min.x;
+        MBoxCollider wall = new MBoxCollider(new Vector2((Max.x - Min.x) / 2.5f, 1), 1, 1, true);
+        wall.MoveTo(new Vector2(Min.x + width / 3, Max.y - height / 2));
+        wall.Rotate(-10);
+        world.AddRigidbody(wall);
+        
+        MBoxCollider wall2 = new MBoxCollider(new Vector2((Max.x - Min.x) / 2.5f, 1), 1, 1, true);
+        wall2.MoveTo(new Vector2(Min.x + width / 3 * 2, Max.y - height / 4));
+        wall2.Rotate(10);
+        world.AddRigidbody(wall2);
     }
 
     #region Draw
@@ -127,18 +138,13 @@ public class Test : UnityEngine.MonoBehaviour
             if (rigi is MPolygonCollider boxCollider)
             {
                 var vertices = boxCollider.GetVertices();
-                for (var i = 0; i < boxCollider.triangles.Length; i += 3)
+                for (int i = 0; i < vertices.Length; i++)
                 {
-                    Vector3 p1 = new Vector3(vertices[boxCollider.triangles[i]].x, 0,
-                        vertices[boxCollider.triangles[i]].y);
-                    Vector3 p2 = new Vector3(vertices[boxCollider.triangles[i + 1]].x, 0,
-                        vertices[boxCollider.triangles[i + 1]].y);
-                    Vector3 p3 = new Vector3(vertices[boxCollider.triangles[i + 2]].x, 0,
-                        vertices[boxCollider.triangles[i + 2]].y);
+                    Vector3 p1 = new Vector3(vertices[i].x, 0, vertices[i].y);
+                    Vector3 p2 = new Vector3(vertices[(i + 1) % vertices.Length].x, 0,
+                        vertices[(i + 1) % vertices.Length].y);
                     Gizmos.color = rigi.IsStatic ? Color.red : Color.black;
-                    Gizmos.DrawLine(p1, p2);
-                    Gizmos.DrawLine(p2, p3);
-                    Gizmos.DrawLine(p1, p3);
+                    Gizmos.DrawLine(p1,p2);
                 }
             }
             else if (rigi is MCircleCollider circleCollider)

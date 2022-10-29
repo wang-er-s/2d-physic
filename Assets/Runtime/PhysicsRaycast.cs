@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 
 public static class PhysicsRaycast
 {
@@ -190,7 +189,7 @@ public static class PhysicsRaycast
         }
     }
 
-    public static void CalcCircleContactPoint(MCircleCollider c1, MCircleCollider c2, ref Manifold manifold)
+    private static void CalcCircleContactPoint(MCircleCollider c1, MCircleCollider c2, ref Manifold manifold)
     {
         var normal = c1.Position - c2.Position;
         normal.Normalize();
@@ -198,7 +197,7 @@ public static class PhysicsRaycast
         manifold.ContactCount = 1;
     }
 
-    public static void CalcPolygonContactPoint(MPolygonCollider p1, MPolygonCollider p2, ref Manifold manifold)
+    private static void CalcPolygonContactPoint(MPolygonCollider p1, MPolygonCollider p2, ref Manifold manifold)
     {
         var vertices1 = p1.GetVertices();
         var vertices2 = p2.GetVertices();
@@ -252,7 +251,7 @@ public static class PhysicsRaycast
         }
     }
 
-    public static void CalcCirclePolygonContactPoint(MCircleCollider circle, MPolygonCollider polygon,
+    private static void CalcCirclePolygonContactPoint(MCircleCollider circle, MPolygonCollider polygon,
         ref Manifold manifold)
     {
         var vertices = polygon.GetVertices();
@@ -272,7 +271,7 @@ public static class PhysicsRaycast
         }
     }
 
-    public static Vector2 FindClosetPoint(Vector2 start, Vector2 end, Vector2 point)
+    private static Vector2 FindClosetPoint(Vector2 start, Vector2 end, Vector2 point)
     {
         Vector2 ab = end - start;
         Vector2 ap = point - start;
@@ -302,22 +301,5 @@ public static class PhysicsRaycast
         if (a1.Min.x > a2.Max.x || a1.Min.y > a2.Max.y || a2.Min.x > a1.Max.x || a2.Min.y > a2.Max.y)
             return false;
         return true;
-    }
-
-    private static float SqrDistance(this Vector2 selfPos, Vector2 otherPos)
-    {
-        float num1 = selfPos.x - otherPos.x;
-        float num2 = selfPos.y - otherPos.y;
-        return (float)(num1 * (double)num1 + num2 * (double)num2);
-    }
-
-    private static bool NearlyEqual(this Vector2 v1, Vector2 v2)
-    {
-        return v1.SqrDistance(v2) < 0.001f * 0.001f;
-    }
-
-    private static bool NearlyEqual(this float f1, float f2)
-    {
-        return Math.Abs(f1 - f2) < 0.001f;
     }
 }

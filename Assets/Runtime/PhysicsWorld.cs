@@ -8,8 +8,6 @@ public sealed class PhysicsWorld
     public const float MaxBodySize = 64f * 64f;
 
     private List<MRigidbody> rigidbodies = new();
-    private List<MCircleCollider> circleColliders = new();
-    private List<MBoxCollider> boxColliders = new();
     private Vector2 gravity;
 
     public int RigidbodyCount => rigidbodies.Count;
@@ -37,17 +35,6 @@ public sealed class PhysicsWorld
     public MRigidbody AddRigidbody(Collider collider)
     {
         MRigidbody rigidbody = null;
-        if (collider is SphereCollider sphereCollider)
-        {
-            rigidbody = new MCircleCollider(sphereCollider.radius, sphereCollider.attachedRigidbody.mass, 1, sphereCollider.attachedRigidbody.isKinematic);
-            circleColliders.Add(rigidbody as MCircleCollider);
-        }else if (collider is BoxCollider boxCollider)
-        {
-            rigidbody = new MBoxCollider(new Vector2(boxCollider.size.x * 2, boxCollider.size.z * 2),
-                boxCollider.attachedRigidbody.mass, 1, boxCollider.attachedRigidbody.isKinematic);
-            boxColliders.Add(rigidbody as MBoxCollider);
-        }
-
         rigidbody.MoveTo(new Vector2(collider.transform.position.x, collider.transform.position.z));
         rigidbodies.Add(rigidbody);
         return rigidbody;
@@ -55,13 +42,6 @@ public sealed class PhysicsWorld
 
     public void AddRigidbody(MRigidbody rigidbody)
     {
-        if (rigidbody is MCircleCollider circleCollider)
-        {
-            circleColliders.Add(circleCollider);
-        }else if (rigidbody is MBoxCollider boxCollider)
-        {
-            boxColliders.Add(boxCollider);
-        }
         rigidbodies.Add(rigidbody);
     }
 
@@ -104,20 +84,6 @@ public sealed class PhysicsWorld
             r2.Velocity -= j * r2.InverseMass * manifold.Normal;
     }
     
-    private const float percent = 0.8f; // usually 20% to 80%
-    private const float slop = 0.01f; // usually 0.01 to 0.1
-
-    void PositionalCorrection(in Manifold manifold)
-    {
-        var r1 = manifold.R1;
-        var r2 = manifold.R2;
-        Vector2 correction = Mathf.Max(manifold.Penetration - slop, 0.0f) / (r1.InverseMass + r2.InverseMass) * percent * manifold.Normal;
-        r1.Move(-r1.InverseMass * correction);
-        r2.Move(r2.InverseMass * correction);
-        // Debug.Log($"fix {r1.Id} {(-r1.InverseMass * correction).y}");
-        // Debug.Log($"fix {r2.Id} {(r1.InverseMass * correction).y}");
-    }
-
     public List<Manifold> contactManifolds = new();
 
     private void CheckCollide()
@@ -170,8 +136,11 @@ public sealed class PhysicsWorld
                 {
                     var offset = -result.Normal * (result.Penetration * result.R1.InverseMass /
                                                    (result.R1.InverseMass + result.R2.InverseMass));
-                    // if (offset.x > 0.01f || offset.y > 0.01f)
                     {
+                        if (result.R2.IsStatic)
+                        {
+                            
+                        }
                         result.R1.Move(offset);
                         // Debug.Log($"id={result.R1.Id} move:{offset.y} pos={result.R1.Position.y}");
                     }
@@ -181,7 +150,6 @@ public sealed class PhysicsWorld
                 {
                     var offset = result.Normal * (result.Penetration * result.R2.InverseMass /
                                                   (result.R1.InverseMass + result.R2.InverseMass));
-                    // if (offset.x > 0.01f | offset.y >= 0.01f)
                     {
                         result.R2.Move(offset);
                         // Debug.Log($"id={result.R2.Id} move:{offset.y} pos={result.R2.Position.y}");
@@ -195,7 +163,6 @@ public sealed class PhysicsWorld
         foreach (var manifold in contactManifolds)
         {
             ResolveCollision(manifold);
-            PositionalCorrection(manifold);
         }
     }
 }

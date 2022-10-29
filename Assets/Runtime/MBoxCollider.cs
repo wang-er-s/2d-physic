@@ -8,7 +8,8 @@ public class MBoxCollider :  MPolygonCollider
      private readonly Vector2 range;
 
 
-     public MBoxCollider(Vector2 range, float mass, float restitution, bool isStatic) : base(mass, restitution, isStatic)
+     public MBoxCollider(Vector2 range, float mass, float restitution, float friction, bool isStatic) : base(mass,
+          restitution, friction, isStatic)
      {
           this.range = range;
           float area = range.x * range.y;
@@ -16,6 +17,7 @@ public class MBoxCollider :  MPolygonCollider
           {
                throw new Exception($"area is too small, min area is {PhysicsWorld.MinBodySize}");
           }
+
           if (area > PhysicsWorld.MaxBodySize)
           {
                throw new Exception($"area is too large, max area is P{PhysicsWorld.MaxBodySize}");

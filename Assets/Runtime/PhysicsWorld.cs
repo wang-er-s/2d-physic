@@ -76,6 +76,7 @@ public sealed class PhysicsWorld
         if (Vector2.Dot(relativeVelocity, manifold.Normal) < 0)
             return;
         float e = Mathf.Min(r1.Restitution, r2.Restitution);
+        // 相对速度在碰撞方向的分量
         float j = -(1f + e) * Vector2.Dot(relativeVelocity, manifold.Normal);
         j /= (r1.InverseMass + r2.InverseMass);
         if (!r1.IsStatic)
@@ -126,35 +127,20 @@ public sealed class PhysicsWorld
 
                         break;
                     }
-                    default:
-                        throw new Exception("rigidbody type error");
                 }
 
                 if (result == Manifold.Null) continue;
 
-                if (!result.R1.IsStatic)
-                {
-                    var offset = -result.Normal * (result.Penetration * result.R1.InverseMass /
-                                                   (result.R1.InverseMass + result.R2.InverseMass));
-                    {
-                        if (result.R2.IsStatic)
-                        {
-                            
-                        }
-                        result.R1.Move(offset);
-                        // Debug.Log($"id={result.R1.Id} move:{offset.y} pos={result.R1.Position.y}");
-                    }
-                }
 
-                if (!result.R2.IsStatic)
-                {
-                    var offset = result.Normal * (result.Penetration * result.R2.InverseMass /
-                                                  (result.R1.InverseMass + result.R2.InverseMass));
-                    {
-                        result.R2.Move(offset);
-                        // Debug.Log($"id={result.R2.Id} move:{offset.y} pos={result.R2.Position.y}");
-                    }
-                }
+                var offset = -result.Normal * (result.Penetration * result.R1.InverseMass /
+                                               (result.R1.InverseMass + result.R2.InverseMass));
+                result.R1.Move(offset);
+                // Debug.Log($"id={result.R1.Id} move:{offset.y} pos={result.R1.Position.y}");
+
+                offset = result.Normal * (result.Penetration * result.R2.InverseMass /
+                                          (result.R1.InverseMass + result.R2.InverseMass));
+                result.R2.Move(offset);
+                // Debug.Log($"id={result.R2.Id} move:{offset.y} pos={result.R2.Position.y}");
 
                 contactManifolds.Add(result);
             }

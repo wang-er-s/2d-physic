@@ -5,11 +5,12 @@ public abstract class MRigidbody
 {
      private static int increaseId = 0;
      public int Id { get; }
-     protected MRigidbody(float mass, float restitution,bool isStatic)
+     protected MRigidbody(float mass, float restitution, float friction ,bool isStatic)
      {
           if (mass < 0) throw new Exception("mass must upper 0");
           Id = ++increaseId;
           IsStatic = isStatic;
+          this.Friction = friction;
           force = Vector2.zero;
           TransformDirty = true;
           AABBDirty = true;
@@ -23,7 +24,7 @@ public abstract class MRigidbody
                if (isStatic)
                {
                     InverseMass = 0;
-                    this.Mass = float.MaxValue;
+                    this.Mass = 0;
                }
                else
                {
@@ -51,7 +52,7 @@ public abstract class MRigidbody
      public readonly float Mass;
 
      /// <summary>
-     ///  脉冲恢复弹力
+     ///  脉冲恢复系数(弹力)
      /// </summary>
      public readonly float Restitution;
 
@@ -60,6 +61,11 @@ public abstract class MRigidbody
      /// </summary>
      public float Inertia { get; protected set; }
      public float InverseInertia { get; protected set; }
+     
+     /// <summary>
+     /// 摩擦力
+     /// </summary>
+     public float Friction { get; protected set; }
 
      internal void Update(float deltaTime, Vector2 gravity)
      {
@@ -68,6 +74,7 @@ public abstract class MRigidbody
           // Vector2 acc = force * InverseMass;
           
           Velocity += gravity * deltaTime;
+          Velocity *= 1 - Friction;
           // Velocity = Vector2.zero;
           Move(deltaTime * Velocity);
           Rotate(RotateVelocity * RotateVelocity);
@@ -76,6 +83,7 @@ public abstract class MRigidbody
      }
 
      public abstract AABB GetAABB();
+     public abstract void ForceRefreshTransform();
 
      public void AddForce(Vector2 forceVal)
      {
@@ -106,4 +114,5 @@ public abstract class MRigidbody
           Angle %= 360;
           TransformDirty = true;
      }
+     
 }

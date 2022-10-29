@@ -4,7 +4,9 @@ public class MPolygonCollider : MRigidbody
 {
      protected Vector2[] BaseVertexes;
      protected Vector2[] vertexes;
-     public MPolygonCollider(float mass, float restitution, bool isStatic) : base(mass, restitution, isStatic)
+
+     public MPolygonCollider(float mass, float restitution, float friction, bool isStatic) : base(mass, restitution,
+          friction, isStatic)
      {
      }
 
@@ -70,4 +72,8 @@ public class MPolygonCollider : MRigidbody
           return AABBCache;
      }
 
+     public override void ForceRefreshTransform()
+     {
+          GetVertices();
+     }
 }

@@ -61,19 +61,24 @@ public class Test : UnityEngine.MonoBehaviour
                 i--;
             }
         }
-
+        
         if (Input.GetMouseButtonDown(0))
         {
             MBoxCollider boxCollider = new MBoxCollider(
                 new Vector2(Random.Range(PolygonSize.x, PolygonSize.y), Random.Range(PolygonSize.x, PolygonSize.y)),
-                2, 0.3f, false);
+                2, 0.3f, 0.1f,false);
             boxCollider.MoveTo(GetMousePos());
             world.AddRigidbody(boxCollider);
         }
 
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            combineCollider.Rotate(5);
+        }
+
         if (Input.GetMouseButtonDown(1))
         {
-            var cir = new MCircleCollider(Random.Range(CircleSize.x, CircleSize.y), 1, 0.3f, false);
+            var cir = new MCircleCollider(Random.Range(CircleSize.x, CircleSize.y), 1, 0.3f,0.1f, false);
             cir.MoveTo(GetMousePos());
             world.AddRigidbody(cir);
         }
@@ -88,7 +93,7 @@ public class Test : UnityEngine.MonoBehaviour
 
     private MPolygonCollider CreateTriangle()
     {
-        MPolygonCollider polygonCollider = new MPolygonCollider(2, 0.3f, false);
+        MPolygonCollider polygonCollider = new MPolygonCollider(2, 0.3f, 0.1f,false);
         Vector2[] vertexes = new[] { new Vector2(-0.707f, 0), new Vector2(0, 1), new Vector2(0.707f, 0) };
         polygonCollider.SetVertexAndTriangles(vertexes);
         return polygonCollider;
@@ -107,23 +112,35 @@ public class Test : UnityEngine.MonoBehaviour
         return new Vector2(mousePositionInWorld.x, mousePositionInWorld.z);
     }
 
+    private CombineCollider combineCollider;
     private void Gen()
     {
-        MBoxCollider ground = new MBoxCollider(new Vector2(Max.x - Min.x, 1), 1, 1, true);
+        MBoxCollider ground = new MBoxCollider(new Vector2(Max.x - Min.x, 1), 1, 1, 0.1f,true);
         ground.MoveTo(new Vector2(0, Min.y + 0.5f));
         world.AddRigidbody(ground);
 
         float height = Max.y - Min.y;
         float width = Max.x - Min.x;
-        MBoxCollider wall = new MBoxCollider(new Vector2((Max.x - Min.x) / 2.5f, 1), 1, 1, true);
+        MBoxCollider wall = new MBoxCollider(new Vector2((Max.x - Min.x) / 2.5f, 1), 1, 1, 0.1f,true);
         wall.MoveTo(new Vector2(Min.x + width / 3, Max.y - height / 2));
         wall.Rotate(-10);
         world.AddRigidbody(wall);
         
-        MBoxCollider wall2 = new MBoxCollider(new Vector2((Max.x - Min.x) / 2.5f, 1), 1, 1, true);
+        MBoxCollider wall2 = new MBoxCollider(new Vector2((Max.x - Min.x) / 2.5f, 1), 1, 1, 0.1f,true);
         wall2.MoveTo(new Vector2(Min.x + width / 3 * 2, Max.y - height / 4));
         wall2.Rotate(10);
         world.AddRigidbody(wall2);
+
+        CombineCollider collider = new CombineCollider(1, 1, 1, false);
+        collider.MoveTo(Vector2.zero);
+        MBoxCollider b1 = new MBoxCollider(Vector2.one, 1, 1, 1, true);
+        b1.MoveTo(Vector2.zero);
+        MBoxCollider b2 = new MBoxCollider(Vector2.one, 1, 1, 1, true);
+        b2.MoveTo(new Vector2(0.5f,0.5f));
+        b2.RotateTo(45);
+        collider.AddRigidbody(b1,b2);
+        combineCollider = collider;
+        world.AddRigidbody(collider);
     }
 
     #region Draw
@@ -137,21 +154,25 @@ public class Test : UnityEngine.MonoBehaviour
             var rigi = world.GetRigidbody(w);
             if (rigi is MPolygonCollider boxCollider)
             {
-                var vertices = boxCollider.GetVertices();
-                for (int i = 0; i < vertices.Length; i++)
-                {
-                    Vector3 p1 = new Vector3(vertices[i].x, 0, vertices[i].y);
-                    Vector3 p2 = new Vector3(vertices[(i + 1) % vertices.Length].x, 0,
-                        vertices[(i + 1) % vertices.Length].y);
-                    Gizmos.color = rigi.IsStatic ? Color.red : Color.black;
-                    Gizmos.DrawLine(p1,p2);
-                }
+                DrawPolygon(boxCollider);
             }
             else if (rigi is MCircleCollider circleCollider)
             {
-                Gizmos.color = rigi.IsStatic ? Color.red : Color.black;
-                Vector3 pos = new Vector3(circleCollider.Position.x, 0, circleCollider.Position.y);
-                DrawGizmosCircle(pos, circleCollider.Radius, 20);
+                DrawCircle(circleCollider);
+            }
+            else if (rigi is CombineCollider combineCollider)
+            {
+                foreach (var mRigidbody in combineCollider.GetRigidbodies())
+                {
+                    if (mRigidbody is MPolygonCollider boxCollider1)
+                    {
+                        DrawPolygon(boxCollider1);
+                    }
+                    else if (mRigidbody is MCircleCollider circleCollider1)
+                    {
+                        DrawCircle(circleCollider1);
+                    }
+                }
             }
 
             Vector3 pos1 = new Vector3(rigi.Position.x, 0, rigi.Position.y);
@@ -171,6 +192,26 @@ public class Test : UnityEngine.MonoBehaviour
                     DrawGizmosCircle(pos2, 0.2f, 5);
                 }
             }
+        }
+    }
+
+    private static void DrawCircle(MCircleCollider circleCollider)
+    {
+        Gizmos.color = circleCollider.IsStatic ? Color.red : Color.black;
+        Vector3 pos = new Vector3(circleCollider.Position.x, 0, circleCollider.Position.y);
+        DrawGizmosCircle(pos, circleCollider.Radius, 20);
+    }
+
+    private static void DrawPolygon(MPolygonCollider polygonCollider)
+    {
+        var vertices = polygonCollider.GetVertices();
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            Vector3 p1 = new Vector3(vertices[i].x, 0, vertices[i].y);
+            Vector3 p2 = new Vector3(vertices[(i + 1) % vertices.Length].x, 0,
+                vertices[(i + 1) % vertices.Length].y);
+            Gizmos.color = polygonCollider.IsStatic ? Color.red : Color.black;
+            Gizmos.DrawLine(p1, p2);
         }
     }
 

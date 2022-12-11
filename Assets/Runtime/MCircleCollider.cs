@@ -21,7 +21,14 @@ public class MCircleCollider : MRigidbody
           }
 
           Inertia = 1f / 2f * Mass * Radius * Radius;
-          InverseInertia = 1 / Inertia;
+          if (Inertia == 0)
+          {
+               InverseInertia = 0;
+          }
+          else
+          {
+               InverseInertia = 1 / Inertia;
+          }
      }
 
      public override void MoveTo(Vector2 pos)

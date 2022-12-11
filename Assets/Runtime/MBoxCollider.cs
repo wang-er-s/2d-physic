@@ -36,6 +36,13 @@ public class MBoxCollider :  MPolygonCollider
 
           SetVertexAndTriangles(tmpVertexes);
           Inertia = (1f / 12) * Mass * (range.x * range.x + range.y * range.y);
-          InverseInertia = 1 / Inertia;
+          if (Inertia == 0)
+          {
+               InverseInertia = 0;
+          }
+          else
+          {
+               InverseInertia = 1 / Inertia;
+          }
      }
 }

@@ -26,4 +26,9 @@ public static class MMath
     {
         return Mathf.Abs(f1 - f2) < 0.001f;
     }
+
+    public static float Cross(this Vector2 v1, Vector2 v2)
+    {
+        return v1.x * v2.y - v1.y * v2.x;
+    }
 }

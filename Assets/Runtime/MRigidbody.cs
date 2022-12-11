@@ -74,7 +74,7 @@ public abstract class MRigidbody
           // Vector2 acc = force * InverseMass;
           
           Velocity += gravity * deltaTime;
-          Velocity *= 1 - Friction;
+          // Velocity *= 1 - Friction;
           // Velocity = Vector2.zero;
           Move(deltaTime * Velocity);
           Rotate(RotateVelocity * RotateVelocity);

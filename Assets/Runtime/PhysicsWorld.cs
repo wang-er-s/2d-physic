@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class PhysicsWorld
@@ -7,14 +6,17 @@ public sealed class PhysicsWorld
     public const float MinBodySize = 0.01f * 0.01f;
     public const float MaxBodySize = 64f * 64f;
 
+    public QuadTree quadTree;
+
     private List<MRigidbody> rigidbodies = new();
     private Vector2 gravity;
 
     public int RigidbodyCount => rigidbodies.Count;
 
-    public PhysicsWorld()
+    public PhysicsWorld(float width,float height)
     {
         gravity = new Vector2(0, -9.81f);
+        quadTree = new QuadTree(new Rect(-width / 2, -height / 2, width, height),maxBodiesPerNode:2, maxLevel: 10);
     }
 
     public MRigidbody GetRigidbody(int index)
@@ -43,6 +45,11 @@ public sealed class PhysicsWorld
     public void AddRigidbody(MRigidbody rigidbody)
     {
         rigidbodies.Add(rigidbody);
+        quadTree.AddBody(rigidbody);
+        rigidbody.OnPositionChanged += mRigidbody =>
+        {
+            quadTree.UpdateBody(mRigidbody);
+        };
     }
 
     public void Update(float deltaTime)
@@ -93,11 +100,14 @@ public sealed class PhysicsWorld
         for (int i = 0; i < rigidbodies.Count; i++)
         {
             var rig1 = rigidbodies[i];
+            if(rig1.IsStatic) continue;
+            var aroundBodies = quadTree.GetBodies(rig1);
+            if(aroundBodies.Count <= 1) continue;
             AABB r1aabb = rig1.GetAABB();
-            for (int j = i + 1; j < rigidbodies.Count; j++)
+            foreach (var rig2 in aroundBodies)
             {
+                if(rig2 == rig1) continue;
                 Manifold result = Manifold.Null;
-                var rig2 = rigidbodies[j];
                 var r2aabb = rig2.GetAABB();
                 if (rig1.IsStatic && rig2.IsStatic) continue;
                 if (!PhysicsRaycast.AABBIntersect(r1aabb, r2aabb)) continue;

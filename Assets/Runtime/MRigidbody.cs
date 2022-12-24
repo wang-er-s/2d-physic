@@ -41,6 +41,7 @@ public abstract class MRigidbody
      public float RotateVelocity;
      protected AABB AABBCache;
      public bool AABBDirty { get; protected set; }
+     public event Action<MRigidbody> OnPositionChanged;
 
      protected Vector2 force;
      
@@ -99,6 +100,7 @@ public abstract class MRigidbody
      public virtual void MoveTo(Vector2 pos)
      {
           Position = pos;
+          OnPositionChanged?.Invoke(this);
           TransformDirty = true;
      }
 

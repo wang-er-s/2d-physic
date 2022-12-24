@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Serialization;
-using Debug = UnityEngine.Debug;
 using Random = UnityEngine.Random;
 
 public class Test : UnityEngine.MonoBehaviour
@@ -21,7 +17,7 @@ public class Test : UnityEngine.MonoBehaviour
 
     private void Awake()
     {
-        world = new PhysicsWorld();
+        world = new PhysicsWorld(40,24);
         sw = Stopwatch.StartNew();
         Gen();
     }
@@ -121,26 +117,26 @@ public class Test : UnityEngine.MonoBehaviour
 
         float height = Max.y - Min.y;
         float width = Max.x - Min.x;
-        MBoxCollider wall = new MBoxCollider(new Vector2((Max.x - Min.x) / 2.5f, 1), 1, 1, 0.1f,true);
-        wall.MoveTo(new Vector2(Min.x + width / 3, Max.y - height / 2));
-        wall.Rotate(-10);
-        world.AddRigidbody(wall);
-        
-        MBoxCollider wall2 = new MBoxCollider(new Vector2((Max.x - Min.x) / 2.5f, 1), 1, 1, 0.1f,true);
-        wall2.MoveTo(new Vector2(Min.x + width / 3 * 2, Max.y - height / 4));
-        wall2.Rotate(10);
-        world.AddRigidbody(wall2);
+        // MBoxCollider wall = new MBoxCollider(new Vector2((Max.x - Min.x) / 2.5f, 1), 1, 1, 0.1f,true);
+        // wall.MoveTo(new Vector2(Min.x + width / 3, Max.y - height / 2));
+        // wall.Rotate(-10);
+        // world.AddRigidbody(wall);
+        //
+        // MBoxCollider wall2 = new MBoxCollider(new Vector2((Max.x - Min.x) / 2.5f, 1), 1, 1, 0.1f,true);
+        // wall2.MoveTo(new Vector2(Min.x + width / 3 * 2, Max.y - height / 4));
+        // wall2.Rotate(10);
+        // world.AddRigidbody(wall2);
 
-        CombineCollider collider = new CombineCollider(1, 1, 1, false);
-        collider.MoveTo(Vector2.zero);
-        MBoxCollider b1 = new MBoxCollider(Vector2.one, 1, 1, 1, true);
-        b1.MoveTo(Vector2.zero);
-        MBoxCollider b2 = new MBoxCollider(Vector2.one, 1, 1, 1, true);
-        b2.MoveTo(new Vector2(0.5f,0.5f));
-        b2.RotateTo(45);
-        collider.AddRigidbody(b1,b2);
-        combineCollider = collider;
-        world.AddRigidbody(collider);
+        // CombineCollider collider = new CombineCollider(1, 1, 1, false);
+        // collider.MoveTo(Vector2.zero);
+        // MBoxCollider b1 = new MBoxCollider(Vector2.one, 1, 1, 1, true);
+        // b1.MoveTo(Vector2.zero);
+        // MBoxCollider b2 = new MBoxCollider(Vector2.one, 1, 1, 1, true);
+        // b2.MoveTo(new Vector2(0.5f,0.5f));
+        // b2.RotateTo(45);
+        // collider.AddRigidbody(b1,b2);
+        // combineCollider = collider;
+        // world.AddRigidbody(collider);
     }
 
     #region Draw
@@ -148,6 +144,7 @@ public class Test : UnityEngine.MonoBehaviour
     private void OnDrawGizmos()
     {
         if(world == null) return;
+        world.quadTree.DrawGizmos();
         Gizmos.color = Color.black;
         for (int w = 0; w < world.RigidbodyCount; w++)
         {

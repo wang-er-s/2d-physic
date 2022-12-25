@@ -100,7 +100,6 @@ public sealed class PhysicsWorld
         for (int i = 0; i < rigidbodies.Count; i++)
         {
             var rig1 = rigidbodies[i];
-            if(rig1.IsStatic) continue;
             var aroundBodies = quadTree.GetBodies(rig1);
             if(aroundBodies.Count <= 1) continue;
             AABB r1aabb = rig1.GetAABB();

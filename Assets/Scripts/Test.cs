@@ -72,8 +72,8 @@ public class Test : UnityEngine.MonoBehaviour
             combineCollider.Rotate(5);
         }
 
-        Vector2 move = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
-        selfRigidbody.Move(move * (Time.deltaTime * 5));
+        // Vector2 move = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+        // selfRigidbody.Move(move * (Time.deltaTime * 5));
 
         if (Input.GetMouseButtonDown(1))
         {
@@ -118,8 +118,8 @@ public class Test : UnityEngine.MonoBehaviour
         ground.MoveTo(new Vector2(0, Min.y + 0.5f));
         world.AddRigidbody(ground);
 
-        selfRigidbody = new MBoxCollider(new Vector2(2, 2), 1, 0.5f, 0.1f, false);
-        world.AddRigidbody(selfRigidbody);
+        // selfRigidbody = new MBoxCollider(new Vector2(2, 2), 1, 0.5f, 0.1f, false);
+        // world.AddRigidbody(selfRigidbody);
 
         float height = Max.y - Min.y;
         float width = Max.x - Min.x;
@@ -181,7 +181,7 @@ public class Test : UnityEngine.MonoBehaviour
             Vector3 pos1 = new Vector3(rigi.Position.x, 0, rigi.Position.y);
             Handles.Label(pos1, rigi.Id.ToString());
         } 
-        
+        return;
         Gizmos.color = Color.green;
         foreach (var manifold in world.contactManifolds)
         {

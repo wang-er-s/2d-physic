@@ -146,7 +146,7 @@ public class QuadTree
     {
         if (_childA != null)
         {
-            var children = GetQuadrant(body.GetAABB());
+            using var children = GetQuadrant(body.GetAABB());
             foreach (var child in children)
             {
                 child.AddBody(body);
@@ -170,8 +170,9 @@ public class QuadTree
         }
 
         AABB aabb = body.GetAABB();
-        quadTrees = new List<QuadTree>(quadTrees);
-        foreach (var quadTree in quadTrees)
+        using var useQuad = RecyclableList<QuadTree>.Create();
+        useQuad.AddRange(quadTrees);
+        foreach (var quadTree in useQuad)
         {
             if (quadTree.AABBQuadIntersect(aabb))
             {
@@ -190,8 +191,9 @@ public class QuadTree
             return;
         }
 
-        quadTrees = new List<QuadTree>(quadTrees);
-        foreach (var quadTree in quadTrees)
+        using var useQuad = RecyclableList<QuadTree>.Create();
+        useQuad.AddRange(quadTrees);
+        foreach (var quadTree in useQuad)
         {
             quadTree.RemoveBodyInternal(body);
         }
@@ -217,6 +219,7 @@ public class QuadTree
 
     private void RemoveBodyInternal(MRigidbody body)
     {
+        if(isRelease) return;
         RemoveBodyFromList(body);
         var parent = _parent;
         if (parent == null) return;
@@ -305,7 +308,7 @@ public class QuadTree
 
         for (int i = _bodies.Count - 1; i >= 0; i--)
         {
-            var quads = GetQuadrant(_bodies[i].GetAABB());
+            using var quads = GetQuadrant(_bodies[i].GetAABB());
             foreach (var quad in quads)
             {
                 quad.AddBody(_bodies[i]); 
@@ -323,7 +326,7 @@ public class QuadTree
             newChildren.Clear();
             for (int i = 0; i < searchQuad.Count; i++)
             {
-                var quads = searchQuad[i].GetQuadrant(aabb);
+                using var quads = searchQuad[i].GetQuadrant(aabb);
                 if (quads.Count > 0)
                 {
                     newChildren.AddRange(quads);
@@ -344,10 +347,9 @@ public class QuadTree
         }
     }
 
-    private List<QuadTree> tmpQuaTree = new();
-    private IReadOnlyList<QuadTree> GetQuadrant(AABB aabb)
+    private RecyclableList<QuadTree> GetQuadrant(AABB aabb)
     {
-        tmpQuaTree.Clear();
+        RecyclableList<QuadTree> tmpQuaTree = RecyclableList<QuadTree>.Create();
         if (_childA == null) return tmpQuaTree;
         if (_childA.AABBQuadIntersect(aabb))
         {
@@ -416,7 +418,8 @@ public class QuadTree
             sb.Append($"{body.Id} ");
         }
         Handles.color = Color.red;
-        Handles.Label(new Vector3(_bounds.x ,0.1f, _bounds.y + 1), sb.ToString());
+        Handles.Label(p1, sb.ToString());
+        return; 
         Handles.color = Color.yellow; 
         Handles.Label(new Vector3(_bounds.x + _bounds.width / 2,0.1f, _bounds.y + _bounds.height / 2), id.ToString());
     }

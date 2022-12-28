@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using UnityEditor;
 using UnityEngine;
 
 public class QuadTree
@@ -30,6 +33,7 @@ public class QuadTree
                 tree._maxBodiesPerNode = parent._maxBodiesPerNode;
                 tree._curLevel = parent._curLevel + 1;
                 tree.selfAABB = new AABB(bounds.min, bounds.max);
+                tree.isRelease = false;
             }
             else tree = new QuadTree(bounds, parent);
 
@@ -55,9 +59,11 @@ public class QuadTree
     }
 
     ///// Constructors /////
-
+    private static int count;
+    private int id;
     public QuadTree(Rect bounds, int maxBodiesPerNode = 6, int maxLevel = 6)
     {
+        id = count++;
         _bounds = bounds;
         _maxBodiesPerNode = maxBodiesPerNode;
         _maxLevel = maxLevel;
@@ -80,25 +86,75 @@ public class QuadTree
     private int _maxBodiesPerNode;
     private int _maxLevel;
     private int _curLevel;
+    private bool isRelease;
     private QuadTree _childA;
     private QuadTree _childB;
     private QuadTree _childC;
     private QuadTree _childD;
+
     private List<MRigidbody> _entCache;
+    private static Dictionary<MRigidbody, List<QuadTree>> body2QuadTree = new();
     private AABB selfAABB;
 
-    ///// Methods /////
+    private void AddBodyToList(MRigidbody body)
+    {
+        if (!_bodies.Contains(body))
+            _bodies.Add(body);
+        if (!body2QuadTree.TryGetValue(body, out var list))
+        {
+            list = new List<QuadTree>();
+            body2QuadTree[body] = list;
+        }
+
+        if (!list.Contains(this))
+            list.Add(this);
+    }
+
+    private void AddBodyToList(IEnumerable<MRigidbody> bodies)
+    {
+        foreach (var body in bodies)
+        {
+            AddBodyToList(body); 
+        }
+    }
+
+    private void RemoveBodyFromList(MRigidbody body)
+    {
+        RemoveBodyFromList(_bodies.IndexOf(body)); 
+    }
+    
+    private void RemoveBodyFromList(int index)
+    {
+        var body = _bodies[index];
+        _bodies.RemoveAt(index);
+        if (body2QuadTree.TryGetValue(body, out var list))
+        {
+            list.Remove(this);
+            if (list.Count <= 0)
+            {
+                body2QuadTree.Remove(body);
+            }
+        }
+        else
+        {
+            throw new Exception("删除了没有添加的刚体");
+        }
+    }
+    
 
     public void AddBody(MRigidbody body)
     {
         if (_childA != null)
         {
-            var child = GetQuadrant(body.Position);
-            child.AddBody(body);
+            var children = GetQuadrant(body.GetAABB());
+            foreach (var child in children)
+            {
+                child.AddBody(body);
+            }
         }
         else
         {
-            _bodies.Add(body);
+            AddBodyToList(body);
             if (_bodies.Count > _maxBodiesPerNode && _curLevel < _maxLevel)
             {
                 Split();
@@ -108,32 +164,78 @@ public class QuadTree
 
     public void UpdateBody(MRigidbody body)
     {
-        RemoveBody(body);
+        if (!body2QuadTree.TryGetValue(body, out var quadTrees))
+        {
+            return;
+        }
+
+        AABB aabb = body.GetAABB();
+        quadTrees = new List<QuadTree>(quadTrees);
+        foreach (var quadTree in quadTrees)
+        {
+            if (quadTree.AABBQuadIntersect(aabb))
+            {
+                continue;
+            }
+            quadTree.RemoveBodyInternal(body);
+        }
+        
         AddBody(body);
     }
 
     public void RemoveBody(MRigidbody body)
     {
-        var quad = GetLowestQuad(body.Position);
-        quad._bodies.Remove(body);
-        var parent = quad._parent;
-        if(parent == null) return;
-        var totalCount = 0;
-        totalCount += parent._childA._bodies.Count;
-        totalCount += parent._childB._bodies.Count;
-        totalCount += parent._childC._bodies.Count;
-        totalCount += parent._childD._bodies.Count;
-        if (totalCount <= _maxBodiesPerNode)
+        if (!body2QuadTree.TryGetValue(body, out var quadTrees))
         {
-            parent._bodies.AddRange(parent._childA._bodies);
-            parent._bodies.AddRange(parent._childB._bodies);
-            parent._bodies.AddRange(parent._childC._bodies);
-            parent._bodies.AddRange(parent._childD._bodies);
-            
+            return;
+        }
+
+        quadTrees = new List<QuadTree>(quadTrees);
+        foreach (var quadTree in quadTrees)
+        {
+            quadTree.RemoveBodyInternal(body);
+        }
+    }
+
+    private int GetAllBodyCount()
+    {
+        if (_childA == null)
+            return _bodies.Count;
+        // if (_childA._childA == null)
+        // {
+        //     List<MRigidbody> bodies = new List<MRigidbody>();
+        //     bodies.AddRange(_childA._bodies);
+        //     bodies.AddRange(_childB._bodies);
+        //     bodies.AddRange(_childC._bodies);
+        //     bodies.AddRange(_childD._bodies);
+        //     bodies = bodies.Distinct().ToList();
+        //     return bodies.Count;
+        // }
+        return _childA.GetAllBodyCount() + _childB.GetAllBodyCount() + _childC.GetAllBodyCount() +
+               _childD.GetAllBodyCount();
+    }
+
+    private void RemoveBodyInternal(MRigidbody body)
+    {
+        RemoveBodyFromList(body);
+        var parent = _parent;
+        if (parent == null) return;
+        if (parent.GetAllBodyCount() <= _maxBodiesPerNode)
+        {
+            parent.AddBodyToList(parent._childA._bodies);
+            parent.AddBodyToList(parent._childB._bodies);
+            parent.AddBodyToList(parent._childC._bodies);
+            parent.AddBodyToList(parent._childD._bodies);
+
             QuadTreePool.PoolQuadTree(parent._childA);
             QuadTreePool.PoolQuadTree(parent._childB);
             QuadTreePool.PoolQuadTree(parent._childC);
             QuadTreePool.PoolQuadTree(parent._childD);
+
+            parent._childA = null;
+            parent._childB = null;
+            parent._childC = null;
+            parent._childD = null;
         }
     }
 
@@ -160,7 +262,6 @@ public class QuadTree
         }
         else
         {
-            // todo 大方块跨越多个quad，导致判断错误
             if (_childA.ContainsAABB(aabb))
                 _childA.GetBodies(aabb, bods);
             if (_childB.ContainsAABB(aabb))
@@ -204,38 +305,73 @@ public class QuadTree
 
         for (int i = _bodies.Count - 1; i >= 0; i--)
         {
-            var child = GetQuadrant(_bodies[i].Position);
-            child.AddBody(_bodies[i]);
-            _bodies.RemoveAt(i);
+            var quads = GetQuadrant(_bodies[i].GetAABB());
+            foreach (var quad in quads)
+            {
+                quad.AddBody(_bodies[i]); 
+            }
+            RemoveBodyFromList(i);
         }
     }
 
-    private QuadTree GetLowestQuad(Vector2 point)
+    private void GetLowestQuad(AABB aabb, List<QuadTree> result)
     {
-        var ret = this;
+        List<QuadTree> searchQuad = new() { this };
+        List<QuadTree> newChildren = new();
         while (true)
         {
-            var newChild = ret.GetQuadrant(point);
-            if (newChild != null) ret = newChild;
+            newChildren.Clear();
+            for (int i = 0; i < searchQuad.Count; i++)
+            {
+                var quads = searchQuad[i].GetQuadrant(aabb);
+                if (quads.Count > 0)
+                {
+                    newChildren.AddRange(quads);
+                }
+                else
+                {
+                    result.Add(searchQuad[i]);
+                    searchQuad.RemoveAt(i);
+                    i--;
+                }
+            }
+            if (newChildren.Count > 0)
+            {
+                searchQuad.Clear();
+                searchQuad.AddRange(newChildren);
+            }
             else break;
         }
-
-        return ret;
     }
-    
-    private QuadTree GetQuadrant(Vector2 point)
+
+    private List<QuadTree> tmpQuaTree = new();
+    private IReadOnlyList<QuadTree> GetQuadrant(AABB aabb)
     {
-        if (_childA == null) return null;
-        if (point.x > _bounds.x + _bounds.width / 2)
+        tmpQuaTree.Clear();
+        if (_childA == null) return tmpQuaTree;
+        if (_childA.AABBQuadIntersect(aabb))
         {
-            if (point.y > _bounds.y + _bounds.height / 2) return _childC;
-            else return _childB;
+            tmpQuaTree.Add(_childA);
         }
-        else
+        if (_childB.AABBQuadIntersect(aabb))
         {
-            if (point.y > _bounds.y + _bounds.height / 2) return _childD;
-            return _childA;
+            tmpQuaTree.Add(_childB);
         }
+        if (_childC.AABBQuadIntersect(aabb))
+        {
+            tmpQuaTree.Add(_childC);
+        }
+        if (_childD.AABBQuadIntersect(aabb))
+        {
+            tmpQuaTree.Add(_childD);
+        }
+
+        return tmpQuaTree;
+    }
+
+    private bool AABBQuadIntersect(AABB aabb)
+    {
+        return PhysicsRaycast.AABBRectIntersect(aabb, _bounds);
     }
 
     private void Clear()
@@ -248,7 +384,12 @@ public class QuadTree
         _childB = null;
         _childC = null;
         _childD = null;
+        while (_bodies.Count > 0)
+        {
+            RemoveBodyFromList(0);
+        }
         _bodies.Clear();
+        isRelease = true;
     }
 
     public void DrawGizmos()
@@ -269,5 +410,14 @@ public class QuadTree
         Gizmos.DrawLine(p2, p3);
         Gizmos.DrawLine(p3, p4);
         Gizmos.DrawLine(p4, p1);
+        StringBuilder sb = new StringBuilder();
+        foreach (var body in _bodies)
+        {
+            sb.Append($"{body.Id} ");
+        }
+        Handles.color = Color.red;
+        Handles.Label(new Vector3(_bounds.x ,0.1f, _bounds.y + 1), sb.ToString());
+        Handles.color = Color.yellow; 
+        Handles.Label(new Vector3(_bounds.x + _bounds.width / 2,0.1f, _bounds.y + _bounds.height / 2), id.ToString());
     }
 }

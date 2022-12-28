@@ -72,6 +72,9 @@ public class Test : UnityEngine.MonoBehaviour
             combineCollider.Rotate(5);
         }
 
+        Vector2 move = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+        selfRigidbody.Move(move * (Time.deltaTime * 5));
+
         if (Input.GetMouseButtonDown(1))
         {
             var cir = new MCircleCollider(Random.Range(CircleSize.x, CircleSize.y), 1, 0.3f,0.1f, false);
@@ -114,6 +117,9 @@ public class Test : UnityEngine.MonoBehaviour
         MBoxCollider ground = new MBoxCollider(new Vector2(Max.x - Min.x, 1), 1, 1, 0.1f,true);
         ground.MoveTo(new Vector2(0, Min.y + 0.5f));
         world.AddRigidbody(ground);
+
+        selfRigidbody = new MBoxCollider(new Vector2(2, 2), 1, 0.5f, 0.1f, false);
+        world.AddRigidbody(selfRigidbody);
 
         float height = Max.y - Min.y;
         float width = Max.x - Min.x;

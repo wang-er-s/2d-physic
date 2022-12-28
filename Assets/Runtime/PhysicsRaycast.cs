@@ -302,4 +302,11 @@ public static class PhysicsRaycast
             return false;
         return true;
     }
+
+    public static bool AABBRectIntersect(AABB aabb, Rect rect)
+    {
+        if (aabb.Min.x > rect.xMax || aabb.Min.y > rect.yMax || rect.xMin > aabb.Max.x || rect.yMin > aabb.Max.y)
+            return false;
+        return true;
+    }
 }

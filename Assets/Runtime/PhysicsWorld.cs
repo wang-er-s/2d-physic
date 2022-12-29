@@ -45,6 +45,7 @@ public sealed class PhysicsWorld
     public void AddRigidbody(MRigidbody rigidbody)
     {
         rigidbodies.Add(rigidbody);
+        return;
         quadTree.AddBody(rigidbody);
         rigidbody.OnPositionChanged += mRigidbody =>
         {
@@ -68,7 +69,7 @@ public sealed class PhysicsWorld
             rigidbodies[i].Update(deltaTime, gravity);
         }
 
-        CheckCollideQuad();
+        CheckCollide();
     }
 
     private void ResolveCollision(in Manifold manifold)
@@ -92,12 +93,9 @@ public sealed class PhysicsWorld
             r2.Velocity -= j * r2.InverseMass * manifold.Normal;
     }
     
-    public List<Manifold> contactManifolds = new();
 
     private void CheckCollideQuad()
     {
-        int count = 0;
-        contactManifolds.Clear();
         for (int i = 0; i < rigidbodies.Count; i++)
         {
             var rig1 = rigidbodies[i];
@@ -112,18 +110,6 @@ public sealed class PhysicsWorld
                 Manifold result = Manifold.Null;
                 var r2aabb = rig2.GetAABB();
                 if (!PhysicsRaycast.AABBIntersect(r1aabb, r2aabb)) continue;
-                bool hasContact = false;
-                for (int j = 0; j < contactManifolds.Count; j++)
-                {
-                    var manifold = contactManifolds[j];
-                    if ((manifold.R2 == rig1 && manifold.R1 == rig2) || (manifold.R1 == rig1 && manifold.R2 == rig2))
-                    {
-                        hasContact = true;
-                        break;
-                    }
-                }
-                if(hasContact) continue;
-                count++;
                 switch (rig1)
                 {
                     case MPolygonCollider polygonCollider when rig2 is MPolygonCollider polygonCollider2:
@@ -165,20 +151,21 @@ public sealed class PhysicsWorld
                 result.R2.Move(offset);
                 // Debug.Log($"id={result.R2.Id} move:{offset.y} pos={result.R2.Position.y}");
 
-                contactManifolds.Add(result);
+                ResolveCollision(result);
             }
-        }
-        Debug.Log(count);
-        foreach (var manifold in contactManifolds)
-        {
-            ResolveCollision(manifold);
         }
     }
     
     private void CheckCollide()
     {
-        int count = 0;
-        contactManifolds.Clear();
+        BroadPhase();
+        NarrowPhase();
+    }
+
+    private List<(MRigidbody r1, MRigidbody r2)> contactPairs = new();
+    private void BroadPhase()
+    {
+        contactPairs.Clear();
         for (int i = 0; i < rigidbodies.Count; i++)
         {
             var rig1 = rigidbodies[i];
@@ -190,56 +177,63 @@ public sealed class PhysicsWorld
                 var r2aabb = rig2.GetAABB();
                 if (rig1.IsStatic && rig2.IsStatic) continue;
                 if (!PhysicsRaycast.AABBIntersect(r1aabb, r2aabb)) continue;
-                count++;
-                switch (rig1)
-                {
-                    case MPolygonCollider polygonCollider when rig2 is MPolygonCollider polygonCollider2:
-                        result = PhysicsRaycast.PolygonsIntersect(polygonCollider, polygonCollider2);
-                        break;
-                    case MPolygonCollider polygonCollider:
-                    {
-                        if (rig2 is MCircleCollider circleCollider)
-                        {
-                            result = PhysicsRaycast.PolygonCircleIntersect(polygonCollider, circleCollider);
-                        }
-
-                        break;
-                    }
-                    case MCircleCollider circleCollider when rig2 is MCircleCollider circleCollider2:
-                        result = PhysicsRaycast.CircleIntersect(circleCollider, circleCollider2);
-                        break;
-                    case MCircleCollider circleCollider:
-                    {
-                        if (rig2 is MPolygonCollider polygonCollider2)
-                        {
-                            result = PhysicsRaycast.PolygonCircleIntersect(polygonCollider2, circleCollider);
-                        }
-
-                        break;
-                    }
-                }
-
-                if (result == Manifold.Null) continue;
-
-
-                var offset = -result.Normal * (result.Penetration * result.R1.InverseMass /
-                                               (result.R1.InverseMass + result.R2.InverseMass));
-                result.R1.Move(offset);
-                // Debug.Log($"id={result.R1.Id} move:{offset.y} pos={result.R1.Position.y}");
-
-                offset = result.Normal * (result.Penetration * result.R2.InverseMass /
-                                          (result.R1.InverseMass + result.R2.InverseMass));
-                result.R2.Move(offset);
-                // Debug.Log($"id={result.R2.Id} move:{offset.y} pos={result.R2.Position.y}");
-
-                contactManifolds.Add(result);
+                contactPairs.Add((rig1, rig2));
             }
         }
+    }
 
-        Debug.Log(count);
-        foreach (var manifold in contactManifolds)
+    private void NarrowPhase()
+    {
+        foreach (var contactPair in contactPairs)
         {
-            ResolveCollision(manifold);
+            var rig1 = contactPair.r1;
+            var rig2 = contactPair.r2;
+            Manifold result = Manifold.Null;
+            switch (rig1)
+            {
+                case MPolygonCollider polygonCollider when rig2 is MPolygonCollider polygonCollider2:
+                    result = PhysicsRaycast.PolygonsIntersect(polygonCollider, polygonCollider2);
+                    ResolveCollision(result);
+                    break;
+                case MPolygonCollider polygonCollider:
+                {
+                    if (rig2 is MCircleCollider circleCollider)
+                    {
+                        result = PhysicsRaycast.PolygonCircleIntersect(polygonCollider, circleCollider);
+                        ResolveCollision(result);
+                    }
+
+                    break;
+                }
+                case MCircleCollider circleCollider when rig2 is MCircleCollider circleCollider2:
+                    result = PhysicsRaycast.CircleIntersect(circleCollider, circleCollider2);
+                    ResolveCollision(result);
+                    break;
+                case MCircleCollider circleCollider:
+                {
+                    if (rig2 is MPolygonCollider polygonCollider2)
+                    {
+                        result = PhysicsRaycast.PolygonCircleIntersect(polygonCollider2, circleCollider);
+                        ResolveCollision(result);
+                    }
+
+                    break;
+                }
+            }
+
+            if (result == Manifold.Null) continue;
+
+
+            var offset = -result.Normal * (result.Penetration * result.R1.InverseMass /
+                                           (result.R1.InverseMass + result.R2.InverseMass));
+            result.R1.Move(offset);
+            // Debug.Log($"id={result.R1.Id} move:{offset.y} pos={result.R1.Position.y}");
+
+            offset = result.Normal * (result.Penetration * result.R2.InverseMass /
+                                      (result.R1.InverseMass + result.R2.InverseMass));
+            result.R2.Move(offset);
+            // Debug.Log($"id={result.R2.Id} move:{offset.y} pos={result.R2.Position.y}");
+            ResolveCollision(result);
         }
     }
 }

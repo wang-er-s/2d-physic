@@ -146,10 +146,14 @@ public class QuadTree
     {
         if (_childA != null)
         {
-            using var children = GetQuadrant(body.GetAABB());
-            foreach (var child in children)
+            using var children = IntersectMultiChild(body.GetAABB());
+            if (children.Count > 1)
             {
-                child.AddBody(body);
+                AddBodyToList(body);
+            }
+            else
+            {
+                children[0].AddBody(body);
             }
         }
         else
@@ -203,18 +207,8 @@ public class QuadTree
     {
         if (_childA == null)
             return _bodies.Count;
-        // if (_childA._childA == null)
-        // {
-        //     List<MRigidbody> bodies = new List<MRigidbody>();
-        //     bodies.AddRange(_childA._bodies);
-        //     bodies.AddRange(_childB._bodies);
-        //     bodies.AddRange(_childC._bodies);
-        //     bodies.AddRange(_childD._bodies);
-        //     bodies = bodies.Distinct().ToList();
-        //     return bodies.Count;
-        // }
         return _childA.GetAllBodyCount() + _childB.GetAllBodyCount() + _childC.GetAllBodyCount() +
-               _childD.GetAllBodyCount();
+               _childD.GetAllBodyCount() + _bodies.Count;
     }
 
     private void RemoveBodyInternal(MRigidbody body)
@@ -258,12 +252,8 @@ public class QuadTree
     private void GetBodies(AABB aabb, List<MRigidbody> bods)
     {
         //no children
-        if (_childA == null)
-        {
-            for (int i = 0; i < _bodies.Count; i++)
-                bods.Add(_bodies[i]);
-        }
-        else
+        bods.AddRange(_bodies);
+        if (_childA != null)
         {
             if (_childA.ContainsAABB(aabb))
                 _childA.GetBodies(aabb, bods);
@@ -306,18 +296,19 @@ public class QuadTree
         _childC = QuadTreePool.GetQuadTree(cRect, this);
         _childD = QuadTreePool.GetQuadTree(dRect, this);
 
-        for (int i = _bodies.Count - 1; i >= 0; i--)
+        for (int i = 0; i < _bodies.Count; i++)
         {
-            using var quads = GetQuadrant(_bodies[i].GetAABB());
-            foreach (var quad in quads)
+            var quads = IntersectMultiChild(_bodies[i].GetAABB());
+            if (quads.Count <= 1)
             {
-                quad.AddBody(_bodies[i]); 
+                quads[0].AddBody(_bodies[i]);
+                RemoveBodyFromList(i);
+                i--;
             }
-            RemoveBodyFromList(i);
         }
     }
 
-    private void GetLowestQuad(AABB aabb, List<QuadTree> result)
+    private QuadTree GetLowestQuad(AABB aabb)
     {
         List<QuadTree> searchQuad = new() { this };
         List<QuadTree> newChildren = new();
@@ -326,16 +317,14 @@ public class QuadTree
             newChildren.Clear();
             for (int i = 0; i < searchQuad.Count; i++)
             {
-                using var quads = searchQuad[i].GetQuadrant(aabb);
-                if (quads.Count > 0)
+                var quad = searchQuad[i].GetQuadrant(aabb);
+                if (quad == searchQuad[i])
                 {
-                    newChildren.AddRange(quads);
+                    return quad;
                 }
                 else
                 {
-                    result.Add(searchQuad[i]);
-                    searchQuad.RemoveAt(i);
-                    i--;
+                    newChildren.Add(quad);
                 }
             }
             if (newChildren.Count > 0)
@@ -343,32 +332,54 @@ public class QuadTree
                 searchQuad.Clear();
                 searchQuad.AddRange(newChildren);
             }
-            else break;
         }
     }
 
-    private RecyclableList<QuadTree> GetQuadrant(AABB aabb)
+    private QuadTree GetQuadrant(AABB aabb)
     {
-        RecyclableList<QuadTree> tmpQuaTree = RecyclableList<QuadTree>.Create();
-        if (_childA == null) return tmpQuaTree;
+        if (_childA == null) return this;
         if (_childA.AABBQuadIntersect(aabb))
         {
-            tmpQuaTree.Add(_childA);
+            return _childA;
         }
         if (_childB.AABBQuadIntersect(aabb))
         {
-            tmpQuaTree.Add(_childB);
+            return _childB;
         }
         if (_childC.AABBQuadIntersect(aabb))
         {
-            tmpQuaTree.Add(_childC);
+            return _childC;
         }
         if (_childD.AABBQuadIntersect(aabb))
         {
-            tmpQuaTree.Add(_childD);
+            return _childD;
         }
 
-        return tmpQuaTree;
+        throw new Exception("超出范围");
+    }
+    
+    private RecyclableList<QuadTree> IntersectMultiChild(AABB aabb)
+    {
+        RecyclableList<QuadTree> result = RecyclableList<QuadTree>.Create();
+        if (_childA == null) return result;
+        if (_childA.AABBQuadIntersect(aabb))
+        {
+            result.Add(_childA);
+        }
+        if (_childB.AABBQuadIntersect(aabb))
+        {
+            result.Add(_childB);
+        }
+        if (_childC.AABBQuadIntersect(aabb))
+        {
+            result.Add(_childC);
+        }
+        if (_childD.AABBQuadIntersect(aabb))
+        {
+            result.Add(_childD);
+        }
+
+        return result;
     }
 
     private bool AABBQuadIntersect(AABB aabb)
